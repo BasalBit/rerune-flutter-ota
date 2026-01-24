@@ -25,15 +25,19 @@ Add your `rerune.json` to the app root and include it as an asset:
 flutter:
   assets:
     - rerune.json
+    - lib/languages/I10n/
 ```
 
 If you pass `apiKey` to the controller, the file is optional and ignored.
+
+When `translations_path` is set in `rerune.json`, the SDK automatically loads
+seed bundles from `app_<code>.arb` files in that folder.
 
 ## Usage
 
 ```dart
 final controller = OtaLocalizationController(
-  manifestUrl: Uri.parse('https://example.com/manifest.json'),
+  baseUrl: Uri.parse('https://api.example.com'),
   supportedLocales: const [Locale('en'), Locale('es')],
   // Optional: override api_key from rerune.json
   // apiKey: 'your-api-key',
@@ -79,6 +83,9 @@ return OtaLocalizationBuilder(
 }
 ```
 
-If a locale entry omits `url`, the SDK will construct it using:
+Manifest URL is derived internally from `baseUrl` + `project_id`:
+`/sdk/projects/{projectId}/translations/manifest?platform={platform}`.
+
+If a locale entry omits `url`, the SDK constructs it using:
 `/sdk/projects/{projectId}/translations/{platform}/{locale}` with values
 from `rerune.json` or controller overrides.

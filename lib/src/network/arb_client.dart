@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class ArbFetchResult {
@@ -20,6 +21,9 @@ class ArbClient {
   }) async {
     final client = _httpClient ?? http.Client();
     try {
+      if (kDebugMode) {
+        debugPrint('OtaLocalization: GET $url (arb)');
+      }
       final requestHeaders = <String, String>{
         if (etag != null) 'If-None-Match': etag,
         'Accept': 'application/json',
@@ -27,7 +31,21 @@ class ArbClient {
       if (headers != null) {
         requestHeaders.addAll(headers);
       }
+      if (kDebugMode) {
+        debugPrint(
+          'OtaLocalization: arb request headers ${_sanitizeHeaders(requestHeaders)}',
+        );
+      }
       final response = await client.get(url, headers: requestHeaders);
+      if (kDebugMode) {
+        debugPrint('OtaLocalization: arb response ${response.statusCode}');
+        debugPrint('OtaLocalization: arb body start');
+        debugPrint(response.body);
+        debugPrint('OtaLocalization: arb body end');
+        if (response.headers.isNotEmpty) {
+          debugPrint('OtaLocalization: arb headers ${response.headers}');
+        }
+      }
       if (response.statusCode == 304) {
         return const ArbFetchResult(notModified: true);
       }
@@ -48,4 +66,18 @@ class ArbClient {
       }
     }
   }
+}
+
+Map<String, String> _sanitizeHeaders(Map<String, String> headers) {
+  final sanitized = Map<String, String>.from(headers);
+  if (sanitized.containsKey('X-API-Key')) {
+    final value = sanitized['X-API-Key'];
+    if (value != null && value.length > 6) {
+      sanitized['X-API-Key'] =
+          '${value.substring(0, 3)}***${value.substring(value.length - 3)}';
+    } else {
+      sanitized['X-API-Key'] = '***';
+    }
+  }
+  return sanitized;
 }

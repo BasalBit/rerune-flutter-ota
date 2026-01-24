@@ -19,22 +19,13 @@ class _OtaExampleAppState extends State<OtaExampleApp> {
   void initState() {
     super.initState();
     _controller = OtaLocalizationController(
-      manifestUrl: Uri.parse(
-        'http://localhost:8080/sdk/projects/697527da6240478042f68646/translations/manifest?platform=flutter',
-      ),
-      supportedLocales: const [Locale('en'), Locale('es')],
-      seedBundles: {
-        const Locale('en'): {
-          'title': 'Rerune OTA Example',
-          'body': 'Translations update without restarting.',
-          'button': 'Check for updates',
-        },
-        const Locale('es'): {
-          'title': 'Ejemplo OTA de Rerune',
-          'body': 'Las traducciones se actualizan sin reiniciar.',
-          'button': 'Buscar actualizaciones',
-        },
-      },
+      baseUrl: Uri.parse('http://localhost:8080'),
+      supportedLocales: const [
+        Locale('de'),
+        Locale('en'),
+        Locale('it'),
+        Locale('pt'),
+      ],
       updatePolicy: const OtaUpdatePolicy(
         checkOnStart: true,
         periodicInterval: Duration(seconds: 10),

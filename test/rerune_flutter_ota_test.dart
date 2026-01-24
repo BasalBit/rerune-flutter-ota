@@ -28,7 +28,7 @@ void main() {
 
   test('controller returns seeded bundle when cache empty', () {
     final controller = OtaLocalizationController(
-      manifestUrl: Uri.parse('https://example.com/manifest.json'),
+      baseUrl: Uri.parse('https://example.com'),
       supportedLocales: const [Locale('en')],
       seedBundles: {
         const Locale('en'): {'hello': 'Hello'},

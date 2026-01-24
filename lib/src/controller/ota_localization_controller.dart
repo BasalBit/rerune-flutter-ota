@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -18,7 +19,8 @@ import '../utils/locale_utils.dart';
 
 class OtaLocalizationController extends ChangeNotifier {
   OtaLocalizationController({
-    required this.manifestUrl,
+    Uri? manifestUrl,
+    required this.baseUrl,
     required this.supportedLocales,
     CacheStore? cacheStore,
     OtaUpdatePolicy? updatePolicy,
@@ -35,9 +37,12 @@ class OtaLocalizationController extends ChangeNotifier {
        _apiKeyOverride = apiKey,
        _projectIdOverride = projectId,
        _platformOverride = platform,
-       _seedBundles = seedBundles ?? const {};
+       _manifestUrlOverride = manifestUrl,
+       _seedBundles = seedBundles == null
+           ? <Locale, Map<String, String>>{}
+           : Map<Locale, Map<String, String>>.from(seedBundles);
 
-  final Uri manifestUrl;
+  final Uri? baseUrl;
   final List<Locale> supportedLocales;
 
   final CacheStore _cacheStore;
@@ -47,6 +52,7 @@ class OtaLocalizationController extends ChangeNotifier {
   final String? _apiKeyOverride;
   final String? _projectIdOverride;
   final String? _platformOverride;
+  final Uri? _manifestUrlOverride;
   final Map<Locale, Map<String, String>> _seedBundles;
 
   final Map<String, Map<String, String>> _bundles = {};
@@ -57,6 +63,7 @@ class OtaLocalizationController extends ChangeNotifier {
   String? _apiKey;
   String? _projectId;
   String _platform = 'flutter';
+  Uri? _manifestUrl;
 
   int get revision => _revision;
 
@@ -116,13 +123,34 @@ class OtaLocalizationController extends ChangeNotifier {
       );
     }
 
+    if (_manifestUrl == null) {
+      errors.add(
+        const OtaError(
+          type: OtaErrorType.invalidManifest,
+          message: 'Manifest URL is missing. Provide baseUrl/project_id.',
+        ),
+      );
+      return OtaUpdateResult(
+        updatedLocales: updated,
+        skippedLocales: skipped,
+        errors: errors,
+      );
+    }
+
     Manifest? manifest = cachedManifest?.manifest;
     try {
-      final result = await _manifestClient.fetch(
-        manifestUrl,
-        etag: cachedManifest?.etag,
-        headers: _authHeaders(),
-      );
+      if (kDebugMode) {
+        debugPrint(
+          'OtaLocalization: config apiKey=${_apiKey != null} projectId=$_projectId platform=$_platform',
+        );
+      }
+      final result = await _manifestClient
+          .fetch(
+            _manifestUrl!,
+            etag: cachedManifest?.etag,
+            headers: _authHeaders(),
+          )
+          .timeout(const Duration(seconds: 15));
       if (!result.notModified && result.manifest != null) {
         manifest = result.manifest;
         _cachedManifest = CachedManifest(
@@ -132,6 +160,10 @@ class OtaLocalizationController extends ChangeNotifier {
         await _cacheStore.writeManifest(_cachedManifest!);
       }
     } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('OtaLocalization: manifest fetch failed: $error');
+        debugPrint('$stackTrace');
+      }
       errors.add(
         OtaError(
           type: OtaErrorType.network,
@@ -208,11 +240,12 @@ class OtaLocalizationController extends ChangeNotifier {
           skipped.add(locale);
           continue;
         }
-        final response = await _arbClient.fetch(
-          arbUrl,
-          etag: cachedArb?.etag,
-          headers: _authHeaders(),
-        );
+        if (kDebugMode) {
+          debugPrint('OtaLocalization: resolved ARB URL $arbUrl');
+        }
+        final response = await _arbClient
+            .fetch(arbUrl, etag: cachedArb?.etag, headers: _authHeaders())
+            .timeout(const Duration(seconds: 15));
         if (response.notModified && cachedArb != null) {
           _bundles[key] = parseArb(cachedArb.data);
           skipped.add(locale);
@@ -241,6 +274,10 @@ class OtaLocalizationController extends ChangeNotifier {
         );
         updated.add(locale);
       } catch (error, stackTrace) {
+        if (kDebugMode) {
+          debugPrint('OtaLocalization: ARB fetch failed for $key: $error');
+          debugPrint('$stackTrace');
+        }
         errors.add(
           OtaError(
             type: OtaErrorType.network,
@@ -266,24 +303,32 @@ class OtaLocalizationController extends ChangeNotifier {
   }
 
   Future<void> _loadCachedBundles() async {
+    var loadedAny = false;
     for (final locale in supportedLocales) {
       final key = localeKey(locale);
       try {
         final cachedArb = await _cacheStore.readArb(key);
         if (cachedArb != null) {
           _bundles[key] = parseArb(cachedArb.data);
+          loadedAny = true;
         } else {
           final seeded = _seedBundleForLocale(locale);
           if (seeded != null) {
             _bundles[key] = Map<String, String>.from(seeded);
+            loadedAny = true;
           }
         }
       } catch (_) {
         final seeded = _seedBundleForLocale(locale);
         if (seeded != null) {
           _bundles[key] = Map<String, String>.from(seeded);
+          loadedAny = true;
         }
       }
+    }
+    if (loadedAny) {
+      _revision += 1;
+      notifyListeners();
     }
   }
 
@@ -335,6 +380,10 @@ class OtaLocalizationController extends ChangeNotifier {
     } else if (platform is String && platform.isNotEmpty) {
       _platform = platform;
     }
+
+    _resolveManifestUrl();
+
+    await _loadSeedBundlesFromConfig(config);
   }
 
   Map<String, String>? _authHeaders() {
@@ -351,14 +400,38 @@ class OtaLocalizationController extends ChangeNotifier {
       if (url.isAbsolute) {
         return url;
       }
-      return manifestUrl.resolveUri(url);
+      final base = _manifestUrl ?? baseUrl;
+      if (base == null) {
+        return null;
+      }
+      return base.resolveUri(url);
     }
     final projectId = _projectId;
     if (projectId == null || projectId.isEmpty) {
       return null;
     }
     final path = '/sdk/projects/$projectId/translations/$_platform/$localeKey';
-    return manifestUrl.replace(path: path, query: null, fragment: null);
+    final base = _manifestUrl ?? baseUrl;
+    if (base == null) {
+      return null;
+    }
+    return base.replace(path: path, query: null, fragment: null);
+  }
+
+  void _resolveManifestUrl() {
+    if (_manifestUrlOverride != null) {
+      _manifestUrl = _manifestUrlOverride;
+      return;
+    }
+    final projectId = _projectId;
+    final base = baseUrl;
+    if (projectId == null || projectId.isEmpty || base == null) {
+      return;
+    }
+    _manifestUrl = base.replace(
+      path: '/sdk/projects/$projectId/translations/manifest',
+      queryParameters: {'platform': _platform},
+    );
   }
 
   Future<Map<String, Object?>?> _loadConfigFromAsset() async {
@@ -373,6 +446,68 @@ class OtaLocalizationController extends ChangeNotifier {
       }
     } catch (_) {}
     return null;
+  }
+
+  Future<void> _loadSeedBundlesFromConfig(Map<String, Object?>? config) async {
+    if (_seedBundles.isNotEmpty) {
+      return;
+    }
+    final translationsPath = config?['translations_path'];
+    if (translationsPath is! String || translationsPath.isEmpty) {
+      return;
+    }
+
+    final codes = _languageCodesFromConfig(config?['languages']);
+    final localeCodes = codes.isNotEmpty
+        ? codes
+        : supportedLocales.map(localeKey).toList(growable: false);
+
+    final normalizedPath = translationsPath.endsWith('/')
+        ? translationsPath
+        : '$translationsPath/';
+
+    for (final code in localeCodes) {
+      final assetPath = '${normalizedPath}app_$code.arb';
+      try {
+        final data = await rootBundle.loadString(assetPath);
+        final parsed = parseArb(data);
+        _seedBundles[_matchSupportedLocale(code)] = parsed;
+      } catch (_) {}
+    }
+  }
+
+  List<String> _languageCodesFromConfig(Object? languages) {
+    if (languages is! List) {
+      return const [];
+    }
+    final codes = <String>[];
+    for (final entry in languages) {
+      if (entry is Map) {
+        final code = entry['code'];
+        if (code is String && code.isNotEmpty) {
+          codes.add(code);
+        }
+      }
+    }
+    return codes;
+  }
+
+  Locale _matchSupportedLocale(String code) {
+    for (final locale in supportedLocales) {
+      if (localeKey(locale) == code || locale.languageCode == code) {
+        return locale;
+      }
+    }
+    return _localeFromCode(code);
+  }
+
+  Locale _localeFromCode(String code) {
+    final normalized = code.replaceAll('-', '_');
+    final parts = normalized.split('_');
+    if (parts.length > 1) {
+      return Locale(parts[0], parts[1]);
+    }
+    return Locale(parts.first);
   }
 
   @override

@@ -12,21 +12,15 @@ import 'package:rerune_flutter_ota/rerune_flutter_ota.dart';
 import 'package:example/main.dart';
 
 void main() {
-  testWidgets('renders seeded translations', (WidgetTester tester) async {
+  testWidgets('renders bundled translations', (WidgetTester tester) async {
     final controller = OtaLocalizationController(
-      manifestUrl: Uri.parse('https://example.com/manifest.json'),
+      baseUrl: Uri.parse('https://example.com'),
       supportedLocales: const [Locale('en')],
       updatePolicy: const OtaUpdatePolicy(checkOnStart: false),
-      seedBundles: {
-        const Locale('en'): {
-          'title': 'Rerune OTA Example',
-          'body': 'Translations update without restarting.',
-          'button': 'Check for updates',
-        },
-      },
     );
 
     addTearDown(controller.dispose);
+    await tester.runAsync(controller.initialize);
 
     await tester.pumpWidget(
       OtaLocalizationBuilder(
@@ -41,7 +35,7 @@ void main() {
       ),
     );
 
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     expect(find.text('Rerune OTA Example'), findsOneWidget);
     expect(

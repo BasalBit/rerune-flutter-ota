@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../model/manifest.dart';
@@ -28,6 +29,9 @@ class ManifestClient {
   }) async {
     final client = _httpClient ?? http.Client();
     try {
+      if (kDebugMode) {
+        debugPrint('OtaLocalization: GET $url (manifest)');
+      }
       final requestHeaders = <String, String>{
         if (etag != null) 'If-None-Match': etag,
         'Accept': 'application/json',
@@ -35,7 +39,21 @@ class ManifestClient {
       if (headers != null) {
         requestHeaders.addAll(headers);
       }
+      if (kDebugMode) {
+        debugPrint(
+          'OtaLocalization: manifest request headers ${_sanitizeHeaders(requestHeaders)}',
+        );
+      }
       final response = await client.get(url, headers: requestHeaders);
+      if (kDebugMode) {
+        debugPrint('OtaLocalization: manifest response ${response.statusCode}');
+        debugPrint('OtaLocalization: manifest body start');
+        debugPrint(response.body);
+        debugPrint('OtaLocalization: manifest body end');
+        if (response.headers.isNotEmpty) {
+          debugPrint('OtaLocalization: manifest headers ${response.headers}');
+        }
+      }
       if (response.statusCode == 304) {
         return const ManifestFetchResult(notModified: true);
       }
@@ -60,4 +78,18 @@ class ManifestClient {
       }
     }
   }
+}
+
+Map<String, String> _sanitizeHeaders(Map<String, String> headers) {
+  final sanitized = Map<String, String>.from(headers);
+  if (sanitized.containsKey('X-API-Key')) {
+    final value = sanitized['X-API-Key'];
+    if (value != null && value.length > 6) {
+      sanitized['X-API-Key'] =
+          '${value.substring(0, 3)}***${value.substring(value.length - 3)}';
+    } else {
+      sanitized['X-API-Key'] = '***';
+    }
+  }
+  return sanitized;
 }
