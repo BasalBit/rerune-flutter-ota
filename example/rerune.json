@@ -1,0 +1,28 @@
+{
+  "api_key": "demo-api-key",
+  "project_id": "demo-project-id",
+  "languages": [
+    {
+      "code": "de",
+      "name": "Deutsch",
+      "main": true
+    },
+    {
+      "code": "en",
+      "name": "English",
+      "main": false
+    },
+    {
+      "code": "it",
+      "name": "Italian",
+      "main": false
+    },
+    {
+      "code": "pt",
+      "name": "Portuguese",
+      "main": false
+    }
+  ],
+  "translations_path": "lib/languages/I10n/",
+  "platform": "flutter"
+}
