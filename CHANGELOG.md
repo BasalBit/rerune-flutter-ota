@@ -1,3 +1,5 @@
 ## 0.0.1
 
-* TODO: Describe initial release.
+- Initial release of the OTA localization SDK.
+- Manifest-based ARB updates with ETag support and local caching.
+- Hot-swap localization delegate with baseUrl-derived manifest URLs.

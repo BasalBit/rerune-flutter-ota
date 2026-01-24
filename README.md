@@ -15,8 +15,7 @@ Add the package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  rerune_flutter_ota:
-    path: ../rerune_flutter_ota
+  rerune_flutter_ota: ^0.0.1
 ```
 
 Add your `rerune.json` to the app root and include it as an asset:
@@ -44,10 +43,6 @@ final controller = OtaLocalizationController(
   // Optional: override project_id/platform from rerune.json
   // projectId: 'your-project-id',
   // platform: 'flutter',
-  seedBundles: {
-    const Locale('en'): {'title': 'Hello'},
-    const Locale('es'): {'title': 'Hola'},
-  },
 );
 
 await controller.initialize();
@@ -89,3 +84,8 @@ Manifest URL is derived internally from `baseUrl` + `project_id`:
 If a locale entry omits `url`, the SDK constructs it using:
 `/sdk/projects/{projectId}/translations/{platform}/{locale}` with values
 from `rerune.json` or controller overrides.
+
+## Links
+- Homepage: https://rerune.io/
+- Repository: https://github.com/BasalBit/rerune-flutter-ota
+- Issues: https://github.com/BasalBit/rerune-flutter-ota/issues
