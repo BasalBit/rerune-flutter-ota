@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:rerune_flutter_ota/rerune_flutter_ota.dart';
 
+import 'l10n/gen/app_localizations.dart';
+import 'l10n/gen/rerune_app_localizations.dart';
+
 void main() {
   runApp(const OtaExampleApp());
 }
@@ -19,7 +22,6 @@ class _OtaExampleAppState extends State<OtaExampleApp> {
   void initState() {
     super.initState();
     _controller = OtaLocalizationController(
-      baseUrl: Uri.parse('http://localhost:8080'),
       supportedLocales: const [
         Locale('de'),
         Locale('en'),
@@ -42,13 +44,20 @@ class _OtaExampleAppState extends State<OtaExampleApp> {
 
   @override
   Widget build(BuildContext context) {
-    return OtaLocalizationBuilder(
+    return OtaTypedLocalizationBuilder<AppLocalizations>(
       controller: _controller,
+      delegateFactory: (context, controller, revision) {
+        return ReruneAppLocalizationsDelegate(
+          controller: controller,
+          revision: revision,
+        );
+      },
       builder: (context, delegate) {
         return MaterialApp(
           title: 'Rerune OTA',
-          localizationsDelegates: [delegate],
-          supportedLocales: _controller.supportedLocales,
+          localizationsDelegates:
+              ReruneAppLocalizationsSetup.localizationsDelegates(delegate),
+          supportedLocales: ReruneAppLocalizationsSetup.supportedLocales,
           home: ExampleHome(controller: _controller),
         );
       },
@@ -63,24 +72,21 @@ class ExampleHome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = OtaLocalizations.of(context);
+    final t = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(t.text('title'))),
+      appBar: AppBar(title: Text(t.title)),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              t.text('body'),
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text(t.body, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 20),
             FilledButton(
               onPressed: () async {
                 await controller.checkForUpdates();
               },
-              child: Text(t.text('button')),
+              child: Text(t.button),
             ),
           ],
         ),

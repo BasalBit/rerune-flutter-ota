@@ -1,16 +1,21 @@
-# example
+# Rerune Flutter OTA Example
 
-A new Flutter project.
+This app demonstrates integrating `rerune_flutter_ota` with bundled ARB seed
+translations and OTA updates from the Rerune API.
 
-## Getting Started
+## Integration notes
 
-This project is a starting point for a Flutter application.
+- The SDK uses `https://rerune.io/api` automatically.
+- You only need to provide `supportedLocales` and project credentials
+  (`project_id`/`api_key`) via `rerune.json` or controller overrides.
+- Seed translations are loaded from the path configured in `rerune.json`
+  (`translations_path`).
+- The UI keeps using generated `AppLocalizations` getters.
 
-A few resources to get you started if this is your first Flutter project:
+## Run
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+flutter pub get
+flutter gen-l10n
+flutter run
+```

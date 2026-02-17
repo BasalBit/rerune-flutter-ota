@@ -10,11 +10,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rerune_flutter_ota/rerune_flutter_ota.dart';
 
 import 'package:example/main.dart';
+import 'package:example/l10n/gen/app_localizations.dart';
+import 'package:example/l10n/gen/rerune_app_localizations.dart';
 
 void main() {
   testWidgets('renders bundled translations', (WidgetTester tester) async {
     final controller = OtaLocalizationController(
-      baseUrl: Uri.parse('https://example.com'),
       supportedLocales: const [Locale('en')],
       updatePolicy: const OtaUpdatePolicy(checkOnStart: false),
     );
@@ -23,12 +24,19 @@ void main() {
     await tester.runAsync(controller.initialize);
 
     await tester.pumpWidget(
-      OtaLocalizationBuilder(
+      OtaTypedLocalizationBuilder<AppLocalizations>(
         controller: controller,
+        delegateFactory: (context, controller, revision) {
+          return ReruneAppLocalizationsDelegate(
+            controller: controller,
+            revision: revision,
+          );
+        },
         builder: (context, delegate) {
           return MaterialApp(
-            localizationsDelegates: [delegate],
-            supportedLocales: controller.supportedLocales,
+            localizationsDelegates:
+                ReruneAppLocalizationsSetup.localizationsDelegates(delegate),
+            supportedLocales: ReruneAppLocalizationsSetup.supportedLocales,
             home: ExampleHome(controller: controller),
           );
         },
