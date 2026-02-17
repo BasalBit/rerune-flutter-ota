@@ -1,6 +1,6 @@
-name: rerune_flutter_ota
+name: rerune
 description: "OTA localization updates for Flutter apps using ARB manifests."
-version: 0.0.2
+version: 0.0.3
 homepage: https://rerune.io/
 repository: https://github.com/BasalBit/rerune-flutter-ota
 issue_tracker: https://github.com/BasalBit/rerune-flutter-ota/issues
@@ -11,7 +11,7 @@ topics:
   - localization
 
 executables:
-  generate: generate
+  rerune: rerune
 
 environment:
   sdk: ^3.9.0

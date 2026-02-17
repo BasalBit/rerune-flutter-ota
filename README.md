@@ -15,22 +15,27 @@ Add the package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  rerune_flutter_ota: ^0.0.1
+  rerune: ^0.0.3
 ```
 
-Add your `rerune.json` to the app root and include it as an asset:
+Provide credentials using one of these options:
+
+- `rerune.json` asset (`project_id`, `api_key`) in app root
+- `ReRune.setup(projectId: ..., apiKey: ...)`
+
+Configuration precedence is strict: `rerune.json` (asset) takes priority over
+constructor values.
+
+If neither source is provided, `OtaLocalizationController` throws a
+`StateError` and logs a debug message describing the required setup.
+
+If you use `rerune.json`, include it in `flutter.assets`:
 
 ```yaml
 flutter:
   assets:
     - rerune.json
-    - lib/languages/I10n/
 ```
-
-If you pass `apiKey` to the controller, the file is optional and ignored.
-
-When `translations_path` is set in `rerune.json`, the SDK automatically loads
-seed bundles from `app_<code>.arb` files in that folder.
 
 ## Seamless AppLocalizations integration
 
@@ -46,46 +51,53 @@ Text(AppLocalizations.of(context)!.helloWorld)
 2. Generate the Rerune wrapper:
 
 ```bash
-dart run rerune_flutter_ota:generate \
-  --input lib/l10n/app_localizations.dart \
-  --output lib/l10n/rerune_app_localizations.dart
+flutter pub run rerune
 ```
+
+`rerune` auto-detects Flutter localization settings from `l10n.yaml`
+(`arb-dir`, `output-dir`, `output-localization-file`, `output-class`) and
+falls back to Flutter defaults when `l10n.yaml` is not present.
+
+If OTA fetch fails (offline/server error), the generated wrapper always falls
+back to bundled `AppLocalizations` values from your app artifact.
 
 3. Wire the generated delegate in your app root:
 
 ```dart
-import 'l10n/app_localizations.dart';
 import 'l10n/rerune_app_localizations.dart';
 
-final controller = OtaLocalizationController(
-  supportedLocales: const [Locale('en'), Locale('es')],
-  // Optional: override api_key from rerune.json
-  // apiKey: 'your-api-key',
-  // Optional: override project_id/platform from rerune.json
-  // projectId: 'your-project-id',
-  // platform: 'flutter',
-);
+void main() {
+  ReRune.setup(
+    // Optional: override project_id from rerune.json
+    // projectId: 'your-project-id',
+    // Optional: override api_key from rerune.json
+    // apiKey: 'your-api-key',
+  );
+  runApp(const MyApp());
+}
 
-await controller.initialize();
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
-return OtaTypedLocalizationBuilder<AppLocalizations>(
-  controller: controller,
-  delegateFactory: (context, controller, revision) {
-    return ReruneAppLocalizationsDelegate(
-      controller: controller,
-      revision: revision,
-    );
-  },
-  builder: (context, delegate) {
+  @override
+  Widget build(BuildContext context) {
     return MaterialApp(
-      localizationsDelegates:
-          ReruneAppLocalizationsSetup.localizationsDelegates(delegate),
-      supportedLocales: ReruneAppLocalizationsSetup.supportedLocales,
+      localizationsDelegates: ReRune.localizationsDelegates,
+      supportedLocales: ReRune.supportedLocales,
       home: MyHomePage(),
     );
-  },
-);
+  }
+}
 ```
+
+This is the complete app-side integration surface.
+
+`ReRune.setup(...)` automatically uses `AppLocalizations.supportedLocales`.
+
+If you do not include `rerune.json` in assets, provide both `projectId` and
+`apiKey` to `ReRune.setup(...)`.
+
+`OtaUpdatePolicy` defaults to `checkOnStart: true`.
 
 `OtaLocalizationController` always uses `https://rerune.io/api` for manifest and
 translation requests.
@@ -110,11 +122,11 @@ translation requests.
 ```
 
 Manifest URL is derived internally from `https://rerune.io/api` + `project_id`:
-`/sdk/projects/{projectId}/translations/manifest?platform={platform}`.
+`/sdk/projects/{projectId}/translations/manifest?platform=flutter`.
 
 If a locale entry omits `url`, the SDK constructs it using:
-`/sdk/projects/{projectId}/translations/{platform}/{locale}` with values
-from `rerune.json` or controller overrides.
+`/sdk/projects/{projectId}/translations/flutter/{locale}` with values
+from controller values or optional `rerune.json`.
 
 ## Links
 - Homepage: https://rerune.io/
