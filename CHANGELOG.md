@@ -1,5 +1,7 @@
 ## Unreleased
 
+## 0.0.2
+
 - BREAKING: removed legacy key-based APIs (`OtaLocalizations`,
   `OtaLocalizationsDelegate`, `OtaLocalizationBuilder`).
 - BREAKING: `OtaLocalizationController` no longer accepts `baseUrl`; API host is
