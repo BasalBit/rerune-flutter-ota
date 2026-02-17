@@ -1,74 +1,41 @@
 import 'package:flutter/material.dart';
-import 'package:rerune_flutter_ota/rerune_flutter_ota.dart';
+import 'package:rerune/rerune.dart';
 
 import 'l10n/gen/app_localizations.dart';
 import 'l10n/gen/rerune_app_localizations.dart';
 
+const _projectId = '699485820fd61693e4cafffd';
+const _apiKey =
+    '5d774ba71a9d3915234733f868a0987fbd0eb065a01365b27216e2dbed436729';
+
 void main() {
+  ReRune.setup(
+    projectId: _projectId,
+    apiKey: _apiKey,
+    updatePolicy: const OtaUpdatePolicy(
+      checkOnStart: true,
+      periodicInterval: Duration(seconds: 10),
+    ),
+  );
   runApp(const OtaExampleApp());
 }
 
-class OtaExampleApp extends StatefulWidget {
+class OtaExampleApp extends StatelessWidget {
   const OtaExampleApp({super.key});
 
   @override
-  State<OtaExampleApp> createState() => _OtaExampleAppState();
-}
-
-class _OtaExampleAppState extends State<OtaExampleApp> {
-  late final OtaLocalizationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = OtaLocalizationController(
-      supportedLocales: const [
-        Locale('de'),
-        Locale('en'),
-        Locale('it'),
-        Locale('pt'),
-      ],
-      updatePolicy: const OtaUpdatePolicy(
-        checkOnStart: true,
-        periodicInterval: Duration(seconds: 10),
-      ),
-    );
-    _controller.initialize();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return OtaTypedLocalizationBuilder<AppLocalizations>(
-      controller: _controller,
-      delegateFactory: (context, controller, revision) {
-        return ReruneAppLocalizationsDelegate(
-          controller: controller,
-          revision: revision,
-        );
-      },
-      builder: (context, delegate) {
-        return MaterialApp(
-          title: 'Rerune OTA',
-          localizationsDelegates:
-              ReruneAppLocalizationsSetup.localizationsDelegates(delegate),
-          supportedLocales: ReruneAppLocalizationsSetup.supportedLocales,
-          home: ExampleHome(controller: _controller),
-        );
-      },
+    return MaterialApp(
+      title: 'Rerune OTA',
+      localizationsDelegates: ReRune.localizationsDelegates,
+      supportedLocales: ReRune.supportedLocales,
+      home: const ExampleHome(),
     );
   }
 }
 
 class ExampleHome extends StatelessWidget {
-  const ExampleHome({super.key, required this.controller});
-
-  final OtaLocalizationController controller;
+  const ExampleHome({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +51,7 @@ class ExampleHome extends StatelessWidget {
             const SizedBox(height: 20),
             FilledButton(
               onPressed: () async {
-                await controller.checkForUpdates();
+                await ReRune.checkForUpdates();
               },
               child: Text(t.button),
             ),

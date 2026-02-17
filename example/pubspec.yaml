@@ -33,7 +33,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: any
-  rerune_flutter_ota:
+  rerune:
     path: ../
 
   # The following adds the Cupertino Icons font to your application.
@@ -62,10 +62,6 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
-
-  assets:
-    - rerune.json
-    - lib/languages/I10n/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

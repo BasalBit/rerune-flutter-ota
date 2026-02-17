@@ -29,19 +29,13 @@ class OtaLocalizationController extends ChangeNotifier {
     ArbClient? arbClient,
     String? apiKey,
     String? projectId,
-    String? platform,
-    Map<Locale, Map<String, String>>? seedBundles,
   }) : _cacheStore = cacheStore ?? createDefaultCacheStore(),
        _updatePolicy = updatePolicy ?? const OtaUpdatePolicy(),
        _manifestClient = manifestClient ?? const ManifestClient(),
        _arbClient = arbClient ?? const ArbClient(),
        _apiKeyOverride = apiKey,
        _projectIdOverride = projectId,
-       _platformOverride = platform,
-       _manifestUrlOverride = manifestUrl,
-       _seedBundles = seedBundles == null
-           ? <Locale, Map<String, String>>{}
-           : Map<Locale, Map<String, String>>.from(seedBundles);
+       _manifestUrlOverride = manifestUrl;
 
   final List<Locale> supportedLocales;
 
@@ -51,9 +45,7 @@ class OtaLocalizationController extends ChangeNotifier {
   final ArbClient _arbClient;
   final String? _apiKeyOverride;
   final String? _projectIdOverride;
-  final String? _platformOverride;
   final Uri? _manifestUrlOverride;
-  final Map<Locale, Map<String, String>> _seedBundles;
 
   final Map<String, Map<String, String>> _bundles = {};
   CachedManifest? _cachedManifest;
@@ -62,7 +54,6 @@ class OtaLocalizationController extends ChangeNotifier {
   bool _configResolved = false;
   String? _apiKey;
   String? _projectId;
-  String _platform = 'flutter';
   Uri? _manifestUrl;
 
   int get revision => _revision;
@@ -88,10 +79,6 @@ class OtaLocalizationController extends ChangeNotifier {
       if (bundle != null) {
         return bundle;
       }
-    }
-    final seeded = _seedBundleForLocale(locale);
-    if (seeded != null) {
-      return seeded;
     }
     return const {};
   }
@@ -146,7 +133,8 @@ class OtaLocalizationController extends ChangeNotifier {
       errors.add(
         const OtaError(
           type: OtaErrorType.invalidManifest,
-          message: 'Manifest URL is missing. Provide project_id.',
+          message:
+              'Manifest URL is missing. Provide projectId/apiKey in constructor or add rerune.json to assets.',
         ),
       );
       return OtaUpdateResult(
@@ -160,7 +148,7 @@ class OtaLocalizationController extends ChangeNotifier {
     try {
       if (kDebugMode) {
         debugPrint(
-          'OtaLocalization: config apiKey=${_apiKey != null} projectId=$_projectId platform=$_platform',
+          'OtaLocalization: config apiKey=${_apiKey != null} projectId=$_projectId platform=flutter',
         );
       }
       final result = await _manifestClient
@@ -330,40 +318,13 @@ class OtaLocalizationController extends ChangeNotifier {
         if (cachedArb != null) {
           _bundles[key] = parseArb(cachedArb.data);
           loadedAny = true;
-        } else {
-          final seeded = _seedBundleForLocale(locale);
-          if (seeded != null) {
-            _bundles[key] = Map<String, String>.from(seeded);
-            loadedAny = true;
-          }
         }
-      } catch (_) {
-        final seeded = _seedBundleForLocale(locale);
-        if (seeded != null) {
-          _bundles[key] = Map<String, String>.from(seeded);
-          loadedAny = true;
-        }
-      }
+      } catch (_) {}
     }
     if (loadedAny) {
       _revision += 1;
       notifyListeners();
     }
-  }
-
-  Map<String, String>? _seedBundleForLocale(Locale locale) {
-    final exact = _seedBundles[locale];
-    if (exact != null) {
-      return exact;
-    }
-    for (final fallbackKey in localeFallbackKeys(locale)) {
-      for (final entry in _seedBundles.entries) {
-        if (localeKey(entry.key) == fallbackKey) {
-          return entry.value;
-        }
-      }
-    }
-    return null;
   }
 
   bool _matchesChecksum(String data, String expected) {
@@ -377,34 +338,32 @@ class OtaLocalizationController extends ChangeNotifier {
     }
     _configResolved = true;
     final config = await _loadConfigFromAsset();
-    final apiKey = config?['api_key'];
-    final projectId = config?['project_id'];
-    final platform = config?['platform'];
+    final assetApiKey = _optionalValue(_configString(config, 'api_key'));
+    final assetProjectId = _optionalValue(_configString(config, 'project_id'));
 
-    final apiKeyOverride = _apiKeyOverride;
-    if (apiKeyOverride != null && apiKeyOverride.isNotEmpty) {
-      _apiKey = apiKeyOverride;
-    } else if (apiKey is String && apiKey.isNotEmpty) {
-      _apiKey = apiKey;
-    }
+    final apiKeyOverride = _optionalValue(_apiKeyOverride);
+    final projectIdOverride = _optionalValue(_projectIdOverride);
 
-    final projectIdOverride = _projectIdOverride;
-    if (projectIdOverride != null && projectIdOverride.isNotEmpty) {
-      _projectId = projectIdOverride;
-    } else if (projectId is String && projectId.isNotEmpty) {
-      _projectId = projectId;
-    }
-
-    final platformOverride = _platformOverride;
-    if (platformOverride != null && platformOverride.isNotEmpty) {
-      _platform = platformOverride;
-    } else if (platform is String && platform.isNotEmpty) {
-      _platform = platform;
-    }
+    _apiKey = assetApiKey ?? apiKeyOverride;
+    _projectId = assetProjectId ?? projectIdOverride;
 
     _resolveManifestUrl();
+    _assertRequiredConfig();
+  }
 
-    await _loadSeedBundlesFromConfig(config);
+  void _assertRequiredConfig() {
+    if (_apiKey != null && _projectId != null) {
+      return;
+    }
+
+    const message =
+        'Missing Rerune configuration. Provide `projectId` and `apiKey` '
+        'in OtaLocalizationController, or add `rerune.json` to Flutter assets '
+        'with `project_id` and `api_key`.';
+    if (kDebugMode) {
+      debugPrint('OtaLocalization: $message');
+    }
+    throw StateError(message);
   }
 
   Map<String, String>? _authHeaders() {
@@ -428,7 +387,7 @@ class OtaLocalizationController extends ChangeNotifier {
     if (projectId == null || projectId.isEmpty) {
       return null;
     }
-    final path = '/api/sdk/projects/$projectId/translations/$_platform/$localeKey';
+    final path = '/api/sdk/projects/$projectId/translations/flutter/$localeKey';
     final base = _manifestUrl ?? _reruneApiBaseUrl;
     return base.replace(path: path, query: null, fragment: null);
   }
@@ -445,7 +404,7 @@ class OtaLocalizationController extends ChangeNotifier {
     }
     _manifestUrl = base.replace(
       path: '/api/sdk/projects/$projectId/translations/manifest',
-      queryParameters: {'platform': _platform},
+      queryParameters: {'platform': 'flutter'},
     );
   }
 
@@ -463,58 +422,19 @@ class OtaLocalizationController extends ChangeNotifier {
     return null;
   }
 
-  Future<void> _loadSeedBundlesFromConfig(Map<String, Object?>? config) async {
-    if (_seedBundles.isNotEmpty) {
-      return;
+  String? _configString(Map<String, Object?>? config, String key) {
+    final value = config?[key];
+    if (value is! String || value.isEmpty) {
+      return null;
     }
-    final translationsPath = config?['translations_path'];
-    if (translationsPath is! String || translationsPath.isEmpty) {
-      return;
-    }
-
-    final codes = _languageCodesFromConfig(config?['languages']);
-    final localeCodes = codes.isNotEmpty
-        ? codes
-        : supportedLocales.map(localeKey).toList(growable: false);
-
-    final normalizedPath = translationsPath.endsWith('/')
-        ? translationsPath
-        : '$translationsPath/';
-
-    for (final code in localeCodes) {
-      final assetPath = '${normalizedPath}app_$code.arb';
-      try {
-        final data = await rootBundle.loadString(assetPath);
-        final parsed = parseArb(data);
-        _seedBundles[_matchSupportedLocale(code)] = parsed;
-      } catch (_) {}
-    }
+    return value;
   }
 
-  List<String> _languageCodesFromConfig(Object? languages) {
-    if (languages is! List) {
-      return const [];
+  String? _optionalValue(String? value) {
+    if (value == null || value.isEmpty) {
+      return null;
     }
-    final codes = <String>[];
-    for (final entry in languages) {
-      if (entry is Map) {
-        final code = entry['code'];
-        if (code is String && code.isNotEmpty) {
-          codes.add(code);
-        }
-      }
-    }
-    return codes;
-  }
-
-  Locale _matchSupportedLocale(String code) {
-    for (final locale in supportedLocales) {
-      final keys = localeFallbackKeys(locale);
-      if (keys.contains(code) || locale.languageCode == code) {
-        return locale;
-      }
-    }
-    return localeFromCode(code);
+    return value;
   }
 
   @override

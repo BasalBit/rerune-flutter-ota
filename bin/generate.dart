@@ -1,6 +1,35 @@
 import 'dart:io';
 
+const _defaultArbDir = 'lib/l10n';
+const _defaultLocalizationFile = 'app_localizations.dart';
+const _defaultLocalizationClass = 'AppLocalizations';
+
+class _L10nConfig {
+  const _L10nConfig({
+    this.arbDir = _defaultArbDir,
+    this.outputDir,
+    this.outputLocalizationFile = _defaultLocalizationFile,
+    this.outputClass = _defaultLocalizationClass,
+  });
+
+  final String arbDir;
+  final String? outputDir;
+  final String outputLocalizationFile;
+  final String outputClass;
+
+  String get effectiveOutputDir => outputDir ?? arbDir;
+}
+
 void main(List<String> args) {
+  runGenerate(args);
+}
+
+void runGenerate(List<String> args) {
+  if (args.contains('--help') || args.contains('-h')) {
+    _printUsage();
+    return;
+  }
+
   final options = _parseArgs(args);
   if (options == null) {
     _printUsage();
@@ -8,17 +37,21 @@ void main(List<String> args) {
     return;
   }
 
-  final inputPath = options['input'] ?? _defaultInputPath();
+  final l10nConfig = _readL10nConfig();
+  final inputPath = options['input'] ?? _defaultInputPath(l10nConfig);
   if (inputPath == null) {
     stderr.writeln('Could not locate app_localizations.dart automatically.');
-    stderr.writeln('Pass --input <path-to-app_localizations.dart>.');
+    stderr.writeln(
+      'Pass --input <path-to-app_localizations.dart> or check l10n.yaml.',
+    );
     exitCode = 66;
     return;
   }
 
   final outputPath =
-      options['output'] ?? 'lib/l10n/rerune_app_localizations.dart';
-  final className = options['class'] ?? 'AppLocalizations';
+      options['output'] ??
+      _defaultOutputPath(inputPath: inputPath, l10nConfig: l10nConfig);
+  final className = options['class'] ?? l10nConfig.outputClass;
   final appLocalizationsImport = _resolveAppLocalizationsImport(
     inputPath: inputPath,
     outputPath: outputPath,
@@ -44,9 +77,6 @@ Map<String, String>? _parseArgs(List<String> args) {
   final options = <String, String>{};
   for (var i = 0; i < args.length; i++) {
     final arg = args[i];
-    if (arg == '--help' || arg == '-h') {
-      return null;
-    }
     if (!arg.startsWith('--')) {
       stderr.writeln('Unexpected argument: $arg');
       return null;
@@ -60,30 +90,264 @@ Map<String, String>? _parseArgs(List<String> args) {
   return options;
 }
 
-String? _defaultInputPath() {
-  const candidates = [
+_L10nConfig _readL10nConfig() {
+  final file = File('l10n.yaml');
+  if (!file.existsSync()) {
+    return const _L10nConfig();
+  }
+
+  var arbDir = _defaultArbDir;
+  String? outputDir;
+  var outputLocalizationFile = _defaultLocalizationFile;
+  var outputClass = _defaultLocalizationClass;
+
+  for (final rawLine in file.readAsStringSync().split('\n')) {
+    final entry = _parseTopLevelYamlScalar(rawLine);
+    if (entry == null) {
+      continue;
+    }
+
+    switch (entry.key) {
+      case 'arb-dir':
+        arbDir = _normalizePath(entry.value);
+        break;
+      case 'output-dir':
+        outputDir = _normalizePath(entry.value);
+        break;
+      case 'output-localization-file':
+        outputLocalizationFile = _normalizePath(entry.value);
+        break;
+      case 'output-class':
+        outputClass = entry.value;
+        break;
+    }
+  }
+
+  return _L10nConfig(
+    arbDir: arbDir,
+    outputDir: outputDir,
+    outputLocalizationFile: outputLocalizationFile,
+    outputClass: outputClass,
+  );
+}
+
+MapEntry<String, String>? _parseTopLevelYamlScalar(String rawLine) {
+  if (rawLine.trim().isEmpty) {
+    return null;
+  }
+
+  final trimmedLeft = rawLine.trimLeft();
+  if (trimmedLeft.startsWith('#')) {
+    return null;
+  }
+
+  if (trimmedLeft.length != rawLine.length) {
+    return null;
+  }
+
+  final separator = trimmedLeft.indexOf(':');
+  if (separator <= 0) {
+    return null;
+  }
+
+  final key = trimmedLeft.substring(0, separator).trim();
+  if (key.isEmpty) {
+    return null;
+  }
+
+  var value = trimmedLeft.substring(separator + 1).trim();
+  value = _trimYamlInlineComment(value);
+  value = _stripYamlQuotes(value);
+  value = value.trim();
+  if (value.isEmpty) {
+    return null;
+  }
+  return MapEntry(key, value);
+}
+
+String _trimYamlInlineComment(String value) {
+  var inSingleQuote = false;
+  var inDoubleQuote = false;
+
+  for (var i = 0; i < value.length; i++) {
+    final char = value[i];
+    if (char == "'" && !inDoubleQuote) {
+      inSingleQuote = !inSingleQuote;
+      continue;
+    }
+    if (char == '"' && !inSingleQuote) {
+      inDoubleQuote = !inDoubleQuote;
+      continue;
+    }
+    if (char == '#' && !inSingleQuote && !inDoubleQuote) {
+      if (i == 0 || value[i - 1] == ' ' || value[i - 1] == '\t') {
+        return value.substring(0, i).trimRight();
+      }
+    }
+  }
+
+  return value;
+}
+
+String _stripYamlQuotes(String value) {
+  if (value.length >= 2 && value.startsWith("'") && value.endsWith("'")) {
+    return value.substring(1, value.length - 1);
+  }
+  if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
+    return value.substring(1, value.length - 1);
+  }
+  return value;
+}
+
+String? _defaultInputPath(_L10nConfig l10nConfig) {
+  final configuredPath = _joinPath(
+    l10nConfig.effectiveOutputDir,
+    l10nConfig.outputLocalizationFile,
+  );
+  final configuredLegacyPath = _joinPath(
+    '.dart_tool/flutter_gen/gen_l10n',
+    _basename(l10nConfig.outputLocalizationFile),
+  );
+
+  final candidates = [
+    configuredPath,
+    configuredLegacyPath,
+    'lib/l10n/gen/app_localizations.dart',
     'lib/l10n/app_localizations.dart',
     '.dart_tool/flutter_gen/gen_l10n/app_localizations.dart',
   ];
+
   for (final path in candidates) {
     if (File(path).existsSync()) {
       return path;
     }
   }
-  return null;
+
+  final desiredFileNames = {
+    _basename(l10nConfig.outputLocalizationFile),
+    _defaultLocalizationFile,
+  };
+
+  final libDir = Directory('lib');
+  if (!libDir.existsSync()) {
+    return null;
+  }
+
+  final discovered = libDir
+      .listSync(recursive: true, followLinks: false)
+      .whereType<File>()
+      .map((file) => _normalizePath(file.path))
+      .where((path) => desiredFileNames.contains(_basename(path)))
+      .toList(growable: false);
+  if (discovered.isEmpty) {
+    return null;
+  }
+
+  final sorted = discovered.toList(growable: true)
+    ..sort((a, b) {
+      final scoreA = _inputPathScore(a, configuredPath: configuredPath);
+      final scoreB = _inputPathScore(b, configuredPath: configuredPath);
+      if (scoreA != scoreB) {
+        return scoreA.compareTo(scoreB);
+      }
+      return a.length.compareTo(b.length);
+    });
+  return sorted.first;
+}
+
+int _inputPathScore(String path, {required String configuredPath}) {
+  if (_normalizePath(path) == _normalizePath(configuredPath)) {
+    return 0;
+  }
+  if (path.contains('/l10n/gen/')) {
+    return 1;
+  }
+  if (path.contains('/l10n/')) {
+    return 2;
+  }
+  if (path.startsWith('.dart_tool/')) {
+    return 3;
+  }
+  return 4;
+}
+
+String _defaultOutputPath({
+  required String inputPath,
+  required _L10nConfig l10nConfig,
+}) {
+  final inputFileName = _basename(inputPath);
+  final wrapperFileName = 'rerune_$inputFileName';
+  final normalized = _normalizePath(inputPath);
+
+  if (normalized.startsWith('.dart_tool/')) {
+    return _joinPath(l10nConfig.effectiveOutputDir, wrapperFileName);
+  }
+
+  final slash = normalized.lastIndexOf('/');
+  if (slash <= 0) {
+    return wrapperFileName;
+  }
+
+  final directory = normalized.substring(0, slash);
+  return '$directory/$wrapperFileName';
+}
+
+String _normalizePath(String value) {
+  var normalized = value.replaceAll('\\', '/');
+  while (normalized.contains('//')) {
+    normalized = normalized.replaceAll('//', '/');
+  }
+  return normalized;
+}
+
+String _joinPath(String left, String right) {
+  final normalizedRight = _normalizePath(right);
+  if (_isAbsolutePath(normalizedRight)) {
+    return normalizedRight;
+  }
+  final normalizedLeft = _normalizePath(left);
+  if (normalizedLeft.isEmpty) {
+    return normalizedRight;
+  }
+  if (normalizedLeft.endsWith('/')) {
+    return '$normalizedLeft$normalizedRight';
+  }
+  return '$normalizedLeft/$normalizedRight';
+}
+
+bool _isAbsolutePath(String value) {
+  if (value.startsWith('/')) {
+    return true;
+  }
+  return RegExp(r'^[A-Za-z]:/').hasMatch(value);
+}
+
+String _basename(String path) {
+  final normalized = _normalizePath(path);
+  final slash = normalized.lastIndexOf('/');
+  if (slash < 0 || slash == normalized.length - 1) {
+    return normalized;
+  }
+  return normalized.substring(slash + 1);
 }
 
 void _printUsage() {
   stdout.writeln('Generate a typed Rerune OTA wrapper for AppLocalizations.');
   stdout.writeln('');
   stdout.writeln('Usage:');
-  stdout.writeln('  dart run rerune_flutter_ota:generate [options]');
+  stdout.writeln('  flutter pub run rerune [options]');
+  stdout.writeln('  dart run rerune [options]');
+  stdout.writeln('  Auto-detect follows Flutter l10n.yaml defaults.');
   stdout.writeln('');
   stdout.writeln('Options:');
-  stdout.writeln('  --input <path>   Path to app_localizations.dart');
-  stdout.writeln('  --output <path>  Output Dart file path');
   stdout.writeln(
-    '  --class <name>   Localization class name (default AppLocalizations)',
+    '  --input <path>   Path to app_localizations.dart (auto if omitted)',
+  );
+  stdout.writeln(
+    '  --output <path>  Output file path (same folder by default)',
+  );
+  stdout.writeln(
+    '  --class <name>   Localization class name (l10n.yaml or AppLocalizations)',
   );
 }
 
@@ -123,9 +387,7 @@ String? _generateWrapper({
 
   final buffer = StringBuffer();
   buffer.writeln("import 'package:flutter/widgets.dart';");
-  buffer.writeln(
-    "import 'package:rerune_flutter_ota/rerune_flutter_ota.dart';",
-  );
+  buffer.writeln("import 'package:rerune/rerune.dart';");
   buffer.writeln('');
   buffer.writeln("import '$appLocalizationsImport';");
   buffer.writeln('');
@@ -133,11 +395,10 @@ String? _generateWrapper({
     'class Rerune${className}Delegate extends LocalizationsDelegate<$className> {',
   );
   buffer.writeln(
-    '  const Rerune${className}Delegate({required this.controller, required this.revision});',
+    '  const Rerune${className}Delegate({required this.controller});',
   );
   buffer.writeln('');
   buffer.writeln('  final OtaLocalizationController controller;');
-  buffer.writeln('  final int revision;');
   buffer.writeln('');
   buffer.writeln('  @override');
   buffer.writeln(
@@ -154,9 +415,7 @@ String? _generateWrapper({
   buffer.writeln(
     '  bool shouldReload(covariant Rerune${className}Delegate old) {',
   );
-  buffer.writeln(
-    '    return old.revision != revision || old.controller != controller;',
-  );
+  buffer.writeln('    return old.controller != controller;');
   buffer.writeln('  }');
   buffer.writeln('}');
   buffer.writeln('');
@@ -206,14 +465,44 @@ String? _generateWrapper({
   }
   buffer.writeln('}');
   buffer.writeln('');
-  buffer.writeln('class Rerune${className}Setup {');
+  buffer.writeln('class ReRune {');
+  buffer.writeln('  static OtaLocalizationController? _controller;');
+  buffer.writeln('');
+  buffer.writeln('  static void setup({');
+  buffer.writeln('    String? projectId,');
+  buffer.writeln('    String? apiKey,');
+  buffer.writeln('    Uri? manifestUrl,');
+  buffer.writeln('    CacheStore? cacheStore,');
+  buffer.writeln('    OtaUpdatePolicy? updatePolicy,');
+  buffer.writeln('  }) {');
+  buffer.writeln('    final controller = OtaLocalizationController(');
+  buffer.writeln('      supportedLocales: $className.supportedLocales,');
+  buffer.writeln('      projectId: projectId,');
+  buffer.writeln('      apiKey: apiKey,');
+  buffer.writeln('      manifestUrl: manifestUrl,');
+  buffer.writeln('      cacheStore: cacheStore,');
+  buffer.writeln('      updatePolicy: updatePolicy,');
+  buffer.writeln('    );');
+  buffer.writeln('    _controller?.removeListener(_handleControllerChange);');
+  buffer.writeln('    _controller = controller;');
+  buffer.writeln('    controller.addListener(_handleControllerChange);');
+  buffer.writeln('    controller.initialize();');
+  buffer.writeln('  }');
+  buffer.writeln('');
   buffer.writeln(
-    '  static List<LocalizationsDelegate<dynamic>> localizationsDelegates(',
+    '  static OtaLocalizationController get controller => _requireController();',
   );
-  buffer.writeln('    LocalizationsDelegate<$className> otaDelegate,');
-  buffer.writeln('  ) {');
+  buffer.writeln('');
+  buffer.writeln('  static Future<OtaUpdateResult> checkForUpdates() {');
+  buffer.writeln('    return _requireController().checkForUpdates();');
+  buffer.writeln('  }');
+  buffer.writeln('');
+  buffer.writeln(
+    '  static List<LocalizationsDelegate<dynamic>> get localizationsDelegates {',
+  );
+  buffer.writeln('    final controller = _requireController();');
   buffer.writeln('    return [');
-  buffer.writeln('      otaDelegate,');
+  buffer.writeln('      Rerune${className}Delegate(controller: controller),');
   buffer.writeln(
     '      ...$className.localizationsDelegates.where((delegate) => delegate.type != $className),',
   );
@@ -223,6 +512,27 @@ String? _generateWrapper({
   buffer.writeln(
     '  static List<Locale> get supportedLocales => $className.supportedLocales;',
   );
+  buffer.writeln('');
+  buffer.writeln('  static OtaLocalizationController _requireController() {');
+  buffer.writeln('    final current = _controller;');
+  buffer.writeln('    if (current != null) {');
+  buffer.writeln('      return current;');
+  buffer.writeln('    }');
+  buffer.writeln('    throw StateError(');
+  buffer.writeln(
+    "      'ReRune.setup(...) must be called before accessing ReRune delegates/locales.',",
+  );
+  buffer.writeln('    );');
+  buffer.writeln('  }');
+  buffer.writeln('');
+  buffer.writeln('  static void _handleControllerChange() {');
+  buffer.writeln('    final root = WidgetsBinding.instance.rootElement;');
+  buffer.writeln('    if (root == null) {');
+  buffer.writeln('      return;');
+  buffer.writeln('    }');
+  buffer.writeln('    root.markNeedsBuild();');
+  buffer.writeln('    WidgetsBinding.instance.scheduleFrame();');
+  buffer.writeln('  }');
   buffer.writeln('}');
   return buffer.toString();
 }
@@ -345,7 +655,8 @@ String _resolveAppLocalizationsImport({
 }) {
   final normalizedInput = inputPath.replaceAll('\\\\', '/');
   if (normalizedInput.contains('.dart_tool/flutter_gen/gen_l10n/')) {
-    return 'package:flutter_gen/gen_l10n/app_localizations.dart';
+    final fileName = _basename(normalizedInput);
+    return 'package:flutter_gen/gen_l10n/$fileName';
   }
   return _relativeImport(fromFile: outputPath, toFile: inputPath);
 }

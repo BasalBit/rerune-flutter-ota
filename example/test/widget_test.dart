@@ -7,39 +7,27 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:rerune_flutter_ota/rerune_flutter_ota.dart';
+import 'package:rerune/rerune.dart';
 
 import 'package:example/main.dart';
-import 'package:example/l10n/gen/app_localizations.dart';
 import 'package:example/l10n/gen/rerune_app_localizations.dart';
 
 void main() {
   testWidgets('renders bundled translations', (WidgetTester tester) async {
-    final controller = OtaLocalizationController(
-      supportedLocales: const [Locale('en')],
+    ReRune.setup(
+      projectId: 'project',
+      apiKey: 'key',
       updatePolicy: const OtaUpdatePolicy(checkOnStart: false),
     );
 
-    addTearDown(controller.dispose);
-    await tester.runAsync(controller.initialize);
+    addTearDown(() => ReRune.controller.dispose());
+    await tester.pump();
 
     await tester.pumpWidget(
-      OtaTypedLocalizationBuilder<AppLocalizations>(
-        controller: controller,
-        delegateFactory: (context, controller, revision) {
-          return ReruneAppLocalizationsDelegate(
-            controller: controller,
-            revision: revision,
-          );
-        },
-        builder: (context, delegate) {
-          return MaterialApp(
-            localizationsDelegates:
-                ReruneAppLocalizationsSetup.localizationsDelegates(delegate),
-            supportedLocales: ReruneAppLocalizationsSetup.supportedLocales,
-            home: ExampleHome(controller: controller),
-          );
-        },
+      MaterialApp(
+        localizationsDelegates: ReRune.localizationsDelegates,
+        supportedLocales: ReRune.supportedLocales,
+        home: const ExampleHome(),
       ),
     );
 
