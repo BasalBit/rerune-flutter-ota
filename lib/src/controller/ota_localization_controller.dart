@@ -5,9 +5,9 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:intl/message_format.dart';
 
 import '../cache/cache_store.dart';
-import '../delegate/ota_localizations_delegate.dart';
 import '../model/manifest.dart';
 import '../model/ota_error.dart';
 import '../model/update_result.dart';
@@ -18,9 +18,10 @@ import '../utils/arb_utils.dart';
 import '../utils/locale_utils.dart';
 
 class OtaLocalizationController extends ChangeNotifier {
+  static final Uri _reruneApiBaseUrl = Uri.parse('https://rerune.io/api');
+
   OtaLocalizationController({
     Uri? manifestUrl,
-    required this.baseUrl,
     required this.supportedLocales,
     CacheStore? cacheStore,
     OtaUpdatePolicy? updatePolicy,
@@ -42,7 +43,6 @@ class OtaLocalizationController extends ChangeNotifier {
            ? <Locale, Map<String, String>>{}
            : Map<Locale, Map<String, String>>.from(seedBundles);
 
-  final Uri? baseUrl;
   final List<Locale> supportedLocales;
 
   final CacheStore _cacheStore;
@@ -82,25 +82,44 @@ class OtaLocalizationController extends ChangeNotifier {
     }
   }
 
-  OtaLocalizationsDelegate buildDelegate() {
-    return OtaLocalizationsDelegate(controller: this, revision: _revision);
-  }
-
   Map<String, String> bundleForLocale(Locale locale) {
-    final key = localeKey(locale);
-    final bundle = _bundles[key];
-    if (bundle != null) {
-      return bundle;
-    }
-    final languageBundle = _bundles[locale.languageCode];
-    if (languageBundle != null) {
-      return languageBundle;
+    for (final key in localeFallbackKeys(locale)) {
+      final bundle = _bundles[key];
+      if (bundle != null) {
+        return bundle;
+      }
     }
     final seeded = _seedBundleForLocale(locale);
     if (seeded != null) {
       return seeded;
     }
     return const {};
+  }
+
+  String? lookupRaw(Locale locale, String key) {
+    final bundle = bundleForLocale(locale);
+    return bundle[key];
+  }
+
+  String resolveText(
+    Locale locale, {
+    required String key,
+    required String fallback,
+    Map<String, Object?>? args,
+  }) {
+    final raw = lookupRaw(locale, key);
+    if (raw == null) {
+      return fallback;
+    }
+    if (args == null || args.isEmpty) {
+      return raw;
+    }
+    try {
+      final formatter = MessageFormat(raw, locale: locale.toString());
+      return formatter.format(Map<String, Object>.from(args));
+    } on FormatException {
+      return fallback;
+    }
   }
 
   Future<OtaUpdateResult> checkForUpdates() async {
@@ -127,7 +146,7 @@ class OtaLocalizationController extends ChangeNotifier {
       errors.add(
         const OtaError(
           type: OtaErrorType.invalidManifest,
-          message: 'Manifest URL is missing. Provide baseUrl/project_id.',
+          message: 'Manifest URL is missing. Provide project_id.',
         ),
       );
       return OtaUpdateResult(
@@ -234,7 +253,7 @@ class OtaLocalizationController extends ChangeNotifier {
             OtaError(
               type: OtaErrorType.invalidManifest,
               message:
-                  'No ARB URL for $key. Provide url in manifest or project_id.',
+                  'No ARB URL for $key. Provide a locale url in manifest or project_id.',
             ),
           );
           skipped.add(locale);
@@ -337,9 +356,11 @@ class OtaLocalizationController extends ChangeNotifier {
     if (exact != null) {
       return exact;
     }
-    for (final entry in _seedBundles.entries) {
-      if (entry.key.languageCode == locale.languageCode) {
-        return entry.value;
+    for (final fallbackKey in localeFallbackKeys(locale)) {
+      for (final entry in _seedBundles.entries) {
+        if (localeKey(entry.key) == fallbackKey) {
+          return entry.value;
+        }
       }
     }
     return null;
@@ -400,21 +421,15 @@ class OtaLocalizationController extends ChangeNotifier {
       if (url.isAbsolute) {
         return url;
       }
-      final base = _manifestUrl ?? baseUrl;
-      if (base == null) {
-        return null;
-      }
+      final base = _manifestUrl ?? _reruneApiBaseUrl;
       return base.resolveUri(url);
     }
     final projectId = _projectId;
     if (projectId == null || projectId.isEmpty) {
       return null;
     }
-    final path = '/sdk/projects/$projectId/translations/$_platform/$localeKey';
-    final base = _manifestUrl ?? baseUrl;
-    if (base == null) {
-      return null;
-    }
+    final path = '/api/sdk/projects/$projectId/translations/$_platform/$localeKey';
+    final base = _manifestUrl ?? _reruneApiBaseUrl;
     return base.replace(path: path, query: null, fragment: null);
   }
 
@@ -424,12 +439,12 @@ class OtaLocalizationController extends ChangeNotifier {
       return;
     }
     final projectId = _projectId;
-    final base = baseUrl;
-    if (projectId == null || projectId.isEmpty || base == null) {
+    final base = _reruneApiBaseUrl;
+    if (projectId == null || projectId.isEmpty) {
       return;
     }
     _manifestUrl = base.replace(
-      path: '/sdk/projects/$projectId/translations/manifest',
+      path: '/api/sdk/projects/$projectId/translations/manifest',
       queryParameters: {'platform': _platform},
     );
   }
@@ -494,20 +509,12 @@ class OtaLocalizationController extends ChangeNotifier {
 
   Locale _matchSupportedLocale(String code) {
     for (final locale in supportedLocales) {
-      if (localeKey(locale) == code || locale.languageCode == code) {
+      final keys = localeFallbackKeys(locale);
+      if (keys.contains(code) || locale.languageCode == code) {
         return locale;
       }
     }
-    return _localeFromCode(code);
-  }
-
-  Locale _localeFromCode(String code) {
-    final normalized = code.replaceAll('-', '_');
-    final parts = normalized.split('_');
-    if (parts.length > 1) {
-      return Locale(parts[0], parts[1]);
-    }
-    return Locale(parts.first);
+    return localeFromCode(code);
   }
 
   @override

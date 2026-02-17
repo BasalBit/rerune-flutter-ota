@@ -10,6 +10,9 @@ topics:
   - rerune
   - localization
 
+executables:
+  generate: generate
+
 environment:
   sdk: ^3.9.0
   flutter: ">=1.17.0"
