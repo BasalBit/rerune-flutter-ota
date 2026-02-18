@@ -15,27 +15,14 @@ Add the package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  rerune: ^0.0.4
+  rerune: ^0.1.0
 ```
 
-Provide credentials using one of these options:
+Provide your publish identifier through setup:
 
-- `rerune.json` asset (`project_id`, `api_key`) in app root
-- `ReRune.setup(projectId: ..., apiKey: ...)`
+- `ReRune.setup(otaPublishId: '...')`
 
-Configuration precedence is strict: `rerune.json` (asset) takes priority over
-constructor values.
-
-If neither source is provided, `ReRuneLocalizationController` throws a
-`StateError` and logs a debug message describing the required setup.
-
-If you use `rerune.json`, include it in `flutter.assets`:
-
-```yaml
-flutter:
-  assets:
-    - rerune.json
-```
+If `otaPublishId` is empty, setup fails with a `StateError`.
 
 ## Seamless AppLocalizations integration
 
@@ -68,10 +55,7 @@ import 'l10n/rerune_app_localizations.dart';
 
 void main() {
   ReRune.setup(
-    // Optional: override project_id from rerune.json
-    // projectId: 'your-project-id',
-    // Optional: override api_key from rerune.json
-    // apiKey: 'your-api-key',
+    otaPublishId: 'your-ota-publish-id',
   );
   runApp(const MyApp());
 }
@@ -94,47 +78,34 @@ This is the complete app-side integration surface.
 
 `ReRune.setup(...)` automatically uses `AppLocalizations.supportedLocales`.
 
-If you do not include `rerune.json` in assets, provide both `projectId` and
-`apiKey` to `ReRune.setup(...)`.
-
 `ReRuneUpdatePolicy` defaults to `checkOnStart: true`.
 
-`ReRuneLocalizationController` always uses `https://rerune.io/api` for manifest and
-translation requests.
+The runtime always uses `https://rerune.io/api` for manifest and translation requests.
 
 ## Optional immediate refresh for fetched OTA changes
 
 This behavior is opt-in. Existing integrations keep the current behavior unless
 you explicitly use the new APIs.
 
-- `ReRuneLocalizationController.reRuneFetchedRevisionListenable`
-- `ReRuneLocalizationController.onReRuneFetchedTextsApplied`
-- `ReRuneBuilder(refreshMode: ReRuneLocalizationRefreshMode.fetchedUpdatesOnly)`
+- `ReRune.fetchedRevisionListenable`
+- `ReRune.onFetchedTextsApplied`
 
 Use fetched-only refresh mode when you want rebuilds only after newly fetched
 translations are applied (not when cached bundles are loaded at startup).
 
 ```dart
-ReRuneBuilder<AppLocalizations>(
-  controller: controller,
-  refreshMode: ReRuneLocalizationRefreshMode.fetchedUpdatesOnly,
-  delegateFactory: (context, controller, revision) {
-    return ReruneAppLocalizationsDelegate(controller: controller);
+ValueListenableBuilder<int>(
+  valueListenable: ReRune.fetchedRevisionListenable,
+  builder: (context, _, __) {
+    return const MyHomePage();
   },
-  builder: (context, delegate) {
-    return Localizations.override(
-      context: context,
-      delegates: [delegate],
-      child: const MyHomePage(),
-    );
-  },
-);
+)
 ```
 
 You can also subscribe directly:
 
 ```dart
-final sub = controller.onReRuneFetchedTextsApplied.listen((event) {
+final sub = ReRune.onFetchedTextsApplied.listen((event) {
   debugPrint('Applied OTA text revision ${event.revision}: ${event.updatedLocales}');
 });
 ```
@@ -147,23 +118,22 @@ final sub = controller.onReRuneFetchedTextsApplied.listen((event) {
   "locales": {
     "en": {
       "version": 3,
-      "url": "https://rerune.io/api/sdk/projects/<projectId>/translations/flutter/en",
+      "url": "https://rerune.io/api/sdk/translations/flutter/en",
       "sha256": "..."
     },
     "es": {
       "version": 2,
-      "url": "https://rerune.io/api/sdk/projects/<projectId>/translations/flutter/es"
+      "url": "https://rerune.io/api/sdk/translations/flutter/es"
     }
   }
 }
 ```
 
-Manifest URL is derived internally from `https://rerune.io/api` + `project_id`:
-`/sdk/projects/{projectId}/translations/manifest?platform=flutter`.
+Manifest URL is fixed to:
+`https://rerune.io/api/sdk/translations/manifest?platform=flutter`.
 
 If a locale entry omits `url`, the SDK constructs it using:
-`/sdk/projects/{projectId}/translations/flutter/{locale}` with values
-from controller values or optional `rerune.json`.
+`https://rerune.io/api/sdk/translations/flutter/{locale}`.
 
 ## Links
 - Homepage: https://rerune.io/

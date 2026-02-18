@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:rerune/rerune.dart';
 
 import 'event_listener_page.dart';
 import 'manual_refresh_page.dart';
 import 'builder_page.dart';
 
 class MenuPage extends StatelessWidget {
-  const MenuPage({required this.controller, super.key});
-
-  final ReRuneLocalizationController controller;
+  const MenuPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -23,15 +20,13 @@ class MenuPage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const Text(
-            'All pages use the same ReRuneLocalizationController instance.',
+            'All pages use the same ReRune.setup-backed runtime instance.',
           ),
           const SizedBox(height: 24),
           FilledButton(
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ManualRefreshPage(controller: controller),
-                ),
+                MaterialPageRoute(builder: (_) => const ManualRefreshPage()),
               );
             },
             child: const Text('1) Manual refresh page'),
@@ -40,9 +35,7 @@ class MenuPage extends StatelessWidget {
           FilledButton(
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => EventListenerPage(controller: controller),
-                ),
+                MaterialPageRoute(builder: (_) => const EventListenerPage()),
               );
             },
             child: const Text('2) Stream event listener + setState'),
@@ -50,13 +43,11 @@ class MenuPage extends StatelessWidget {
           const SizedBox(height: 12),
           FilledButton(
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => BuilderPage(controller: controller),
-                ),
-              );
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const BuilderPage()));
             },
-            child: const Text('3) ReRuneBuilder (fetched updates only)'),
+            child: const Text('3) Builder-driven fetched updates'),
           ),
         ],
       ),

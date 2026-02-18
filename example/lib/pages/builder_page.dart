@@ -1,48 +1,35 @@
 import 'package:flutter/material.dart';
-import 'package:rerune/rerune.dart';
 
 import '../l10n/gen/app_localizations.dart';
 import '../l10n/gen/rerune_app_localizations.dart';
 
 class BuilderPage extends StatelessWidget {
-  const BuilderPage({required this.controller, super.key});
-
-  final ReRuneLocalizationController controller;
+  const BuilderPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ReRuneBuilder<AppLocalizations>(
-      controller: controller,
-      refreshMode: ReRuneLocalizationRefreshMode.fetchedUpdatesOnly,
-      delegateFactory: (context, activeController, _) {
-        return ReruneAppLocalizationsDelegate(controller: activeController);
-      },
-      builder: (context, delegate) {
-        return Localizations.override(
-          context: context,
-          delegates: [delegate],
-          child: _BuilderBody(controller: controller),
-        );
+    return ValueListenableBuilder<int>(
+      valueListenable: ReRune.fetchedRevisionListenable,
+      builder: (context, _, _) {
+        return const _BuilderBody();
       },
     );
   }
 }
 
 class _BuilderBody extends StatelessWidget {
-  const _BuilderBody({required this.controller});
-
-  final ReRuneLocalizationController controller;
+  const _BuilderBody();
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('ReRuneBuilder')),
+      appBar: AppBar(title: const Text('Builder-driven refresh')),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
           const Text(
-            'This page relies on ReRuneBuilder with fetched-updates-only mode.',
+            'This page uses ValueListenableBuilder to rebuild only on fetched OTA revisions.',
           ),
           const SizedBox(height: 24),
           Text(t.title, style: Theme.of(context).textTheme.headlineSmall),
@@ -51,7 +38,7 @@ class _BuilderBody extends StatelessWidget {
           const SizedBox(height: 20),
           FilledButton(
             onPressed: () {
-              controller.checkForUpdates();
+              ReRune.checkForUpdates();
             },
             child: Text(t.button),
           ),

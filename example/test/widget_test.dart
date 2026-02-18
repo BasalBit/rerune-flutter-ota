@@ -9,30 +9,25 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rerune/rerune.dart';
 
 import 'package:example/main.dart';
-import 'package:example/l10n/gen/app_localizations.dart';
+import 'package:example/l10n/gen/rerune_app_localizations.dart';
 
 void main() {
   testWidgets('renders menu and opens all demo pages', (
     WidgetTester tester,
   ) async {
-    final controller = ReRuneLocalizationController(
-      supportedLocales: AppLocalizations.supportedLocales,
-      projectId: 'project',
-      apiKey: 'key',
+    ReRune.setup(
+      otaPublishId: 'publish-id',
       updatePolicy: const ReRuneUpdatePolicy(checkOnStart: false),
     );
 
-    await tester.pumpWidget(OtaExampleApp(controller: controller));
+    await tester.pumpWidget(const OtaExampleApp());
 
     await tester.pump();
 
     expect(find.text('Rerune OTA menu'), findsOneWidget);
     expect(find.text('1) Manual refresh page'), findsOneWidget);
     expect(find.text('2) Stream event listener + setState'), findsOneWidget);
-    expect(
-      find.text('3) ReRuneBuilder (fetched updates only)'),
-      findsOneWidget,
-    );
+    expect(find.text('3) Builder-driven fetched updates'), findsOneWidget);
 
     await tester.tap(find.text('1) Manual refresh page'));
     await tester.pumpAndSettle();
@@ -46,8 +41,8 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('3) ReRuneBuilder (fetched updates only)'));
+    await tester.tap(find.text('3) Builder-driven fetched updates'));
     await tester.pumpAndSettle();
-    expect(find.text('ReRuneBuilder'), findsOneWidget);
+    expect(find.text('Builder-driven refresh'), findsOneWidget);
   });
 }

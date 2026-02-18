@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rerune/rerune.dart';
+import 'package:rerune/src/controller/ota_localization_controller.dart';
+import 'package:rerune/src/widget/ota_typed_localization_builder.dart';
 
 void main() {
   testWidgets('default mode rebuilds on controller notifications', (
@@ -14,7 +16,7 @@ void main() {
     await tester.pumpWidget(
       Directionality(
         textDirection: TextDirection.ltr,
-        child: ReRuneBuilder<String>(
+        child: OtaTypedLocalizationBuilder<String>(
           controller: controller,
           delegateFactory: (context, _, revision) {
             observedRevisions.add(revision);
@@ -43,9 +45,9 @@ void main() {
     await tester.pumpWidget(
       Directionality(
         textDirection: TextDirection.ltr,
-        child: ReRuneBuilder<String>(
+        child: OtaTypedLocalizationBuilder<String>(
           controller: controller,
-          refreshMode: ReRuneLocalizationRefreshMode.fetchedUpdatesOnly,
+          refreshMode: OtaLocalizationRefreshMode.fetchedUpdatesOnly,
           delegateFactory: (context, _, revision) {
             observedRevisions.add(revision);
             return _TestDelegate();
@@ -73,9 +75,9 @@ void main() {
     await tester.pumpWidget(
       Directionality(
         textDirection: TextDirection.ltr,
-        child: ReRuneBuilder<String>(
+        child: OtaTypedLocalizationBuilder<String>(
           controller: controller,
-          refreshMode: ReRuneLocalizationRefreshMode.fetchedUpdatesOnly,
+          refreshMode: OtaLocalizationRefreshMode.fetchedUpdatesOnly,
           delegateFactory: (context, _, revision) {
             observedRevisions.add(revision);
             return _TestDelegate();
@@ -105,12 +107,11 @@ class _TestDelegate extends LocalizationsDelegate<String> {
   bool shouldReload(covariant LocalizationsDelegate<String> old) => false;
 }
 
-class _TestLocalizationController extends ReRuneLocalizationController {
+class _TestLocalizationController extends OtaLocalizationController {
   _TestLocalizationController()
     : super(
         supportedLocales: const [Locale('en')],
-        projectId: 'project',
-        apiKey: 'key',
+        otaPublishId: 'publish-id',
         updatePolicy: const ReRuneUpdatePolicy(checkOnStart: false),
       );
 

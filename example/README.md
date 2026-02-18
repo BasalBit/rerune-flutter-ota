@@ -6,10 +6,9 @@ API.
 ## Integration notes
 
 - The SDK uses `https://rerune.io/api` automatically.
-- Provide project credentials via `ReRune.setup(projectId: ..., apiKey: ...)`.
+- Provide publish identifier via `ReRune.setup(otaPublishId: ...)`.
 - `ReRune.localizationsDelegates` and `ReRune.supportedLocales` are ready to use in `MaterialApp`.
-- If `rerune.json` is used, add it to `flutter.assets`; it overrides constructor values.
-- If neither constructor credentials nor asset config is present, controller throws a `StateError`.
+- `otaPublishId` is required for update checks; empty values throw `StateError`.
 - `ReRuneUpdatePolicy` defaults to `checkOnStart: true`.
 - The UI keeps using generated `AppLocalizations` getters.
 

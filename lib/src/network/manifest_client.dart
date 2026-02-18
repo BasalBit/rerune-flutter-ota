@@ -82,13 +82,13 @@ class ManifestClient {
 
 Map<String, String> _sanitizeHeaders(Map<String, String> headers) {
   final sanitized = Map<String, String>.from(headers);
-  if (sanitized.containsKey('X-API-Key')) {
-    final value = sanitized['X-API-Key'];
+  if (sanitized.containsKey('X-OTA-Publish-Id')) {
+    final value = sanitized['X-OTA-Publish-Id'];
     if (value != null && value.length > 6) {
-      sanitized['X-API-Key'] =
+      sanitized['X-OTA-Publish-Id'] =
           '${value.substring(0, 3)}***${value.substring(value.length - 3)}';
     } else {
-      sanitized['X-API-Key'] = '***';
+      sanitized['X-OTA-Publish-Id'] = '***';
     }
   }
   return sanitized;

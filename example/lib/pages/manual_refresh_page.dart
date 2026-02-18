@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:rerune/rerune.dart';
 
 import '../l10n/gen/app_localizations.dart';
+import '../l10n/gen/rerune_app_localizations.dart';
 
 class ManualRefreshPage extends StatefulWidget {
-  const ManualRefreshPage({required this.controller, super.key});
-
-  final ReRuneLocalizationController controller;
+  const ManualRefreshPage({super.key});
 
   @override
   State<ManualRefreshPage> createState() => _ManualRefreshPageState();
@@ -28,7 +26,7 @@ class _ManualRefreshPageState extends State<ManualRefreshPage> {
   }
 
   Future<void> _checkForUpdates() async {
-    final result = await widget.controller.checkForUpdates();
+    final result = await ReRune.checkForUpdates();
     if (!mounted) {
       return;
     }
@@ -52,21 +50,9 @@ class _ManualRefreshPageState extends State<ManualRefreshPage> {
     final t = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context);
     _resolvedLocale = locale;
-    _title = widget.controller.resolveText(
-      locale,
-      key: 'title',
-      fallback: t.title,
-    );
-    _body = widget.controller.resolveText(
-      locale,
-      key: 'body',
-      fallback: t.body,
-    );
-    _button = widget.controller.resolveText(
-      locale,
-      key: 'button',
-      fallback: t.button,
-    );
+    _title = t.title;
+    _body = t.body;
+    _button = t.button;
   }
 
   @override

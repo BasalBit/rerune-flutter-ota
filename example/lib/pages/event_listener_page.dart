@@ -1,31 +1,27 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:rerune/rerune.dart';
 
 import '../l10n/gen/app_localizations.dart';
+import '../l10n/gen/rerune_app_localizations.dart';
 
 class EventListenerPage extends StatefulWidget {
-  const EventListenerPage({required this.controller, super.key});
-
-  final ReRuneLocalizationController controller;
+  const EventListenerPage({super.key});
 
   @override
   State<EventListenerPage> createState() => _EventListenerPageState();
 }
 
 class _EventListenerPageState extends State<EventListenerPage> {
-  ReRuneTextUpdateEvent? _lastEvent;
-  ReRuneUpdateResult? _lastResult;
+  Object? _lastEvent;
+  Object? _lastResult;
   bool _isChecking = false;
-  StreamSubscription<ReRuneTextUpdateEvent>? _subscription;
+  StreamSubscription? _subscription;
 
   @override
   void initState() {
     super.initState();
-    _subscription = widget.controller.onReRuneFetchedTextsApplied.listen((
-      event,
-    ) {
+    _subscription = ReRune.onFetchedTextsApplied.listen((event) {
       if (!mounted) {
         return;
       }
@@ -45,7 +41,7 @@ class _EventListenerPageState extends State<EventListenerPage> {
     setState(() {
       _isChecking = true;
     });
-    final result = await widget.controller.checkForUpdates();
+    final result = await ReRune.checkForUpdates();
     if (!mounted) {
       return;
     }
@@ -58,22 +54,9 @@ class _EventListenerPageState extends State<EventListenerPage> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    final locale = Localizations.localeOf(context);
-    final title = widget.controller.resolveText(
-      locale,
-      key: 'title',
-      fallback: t.title,
-    );
-    final body = widget.controller.resolveText(
-      locale,
-      key: 'body',
-      fallback: t.body,
-    );
-    final button = widget.controller.resolveText(
-      locale,
-      key: 'button',
-      fallback: t.button,
-    );
+    final title = t.title;
+    final body = t.body;
+    final button = t.button;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Event listener + setState')),
@@ -96,13 +79,13 @@ class _EventListenerPageState extends State<EventListenerPage> {
           Text(
             _lastEvent == null
                 ? 'No fetched-update event observed yet.'
-                : 'Last fetched revision: ${_lastEvent!.revision} - locales: ${_lastEvent!.updatedLocales.join(', ')}',
+                : 'Last fetched revision: ${(_lastEvent as dynamic).revision} - locales: ${(_lastEvent as dynamic).updatedLocales.join(', ')}',
           ),
           const SizedBox(height: 8),
           Text(
             _lastResult == null
                 ? 'No check result yet.'
-                : 'Last check -> updates: ${_lastResult!.updatedLocales.length}, errors: ${_lastResult!.errors.length}',
+                : 'Last check -> updates: ${(_lastResult as dynamic).updatedLocales.length}, errors: ${(_lastResult as dynamic).errors.length}',
           ),
         ],
       ),

@@ -5,10 +5,10 @@ This document is a compact reference of all completed changes in the current wor
 ## 1) What was added
 
 - Optional immediate text refresh support after OTA fetch/apply.
-- New fetched-update signal APIs in `ReRuneLocalizationController`:
-  - `reRuneFetchedRevision`
-  - `reRuneFetchedRevisionListenable`
-  - `onReRuneFetchedTextsApplied`
+- Configuration/auth moved to `otaPublishId` only.
+- New fetched-update APIs exposed through generated `ReRune` static accessors:
+  - `ReRune.fetchedRevisionListenable`
+  - `ReRune.onFetchedTextsApplied`
 - New event model: `ReRuneTextUpdateEvent`.
 - Builder-level opt-in refresh mode: `ReRuneLocalizationRefreshMode.fetchedUpdatesOnly`.
 
@@ -32,6 +32,21 @@ All consumer-facing APIs were aligned to `ReRune*` / `reRune*` naming rules.
 - `OtaTypedLocalizationBuilder<T>` -> `ReRuneBuilder<T>`
 - `OtaTypedDelegateFactory<T>` -> `ReRuneDelegateFactory<T>`
 - `OtaTypedLocalizationWidgetBuilder<T>` -> `ReRuneLocalizationWidgetBuilder<T>`
+
+Config/auth breaking changes:
+
+- Removed `rerune.json` runtime config support.
+- Removed `projectId`, `apiKey`, and `manifestUrl` setup inputs.
+- Internal runtime now requires `otaPublishId`.
+- Header changed from `X-API-Key` to `X-OTA-Publish-Id`.
+- Manifest endpoint: `https://rerune.io/api/sdk/translations/manifest?platform=flutter`.
+- ARB fallback endpoint: `https://rerune.io/api/sdk/translations/flutter/{locale}`.
+
+Encapsulation changes:
+
+- `ReRuneLocalizationController` is no longer exported as a public consumer API.
+- Consumer entrypoint is generated `ReRune.setup(...)`.
+- Example app now uses setup-only flow (no direct controller construction).
 
 ## 3) Example app changes
 

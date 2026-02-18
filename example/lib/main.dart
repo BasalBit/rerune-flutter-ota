@@ -1,47 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:rerune/rerune.dart';
 
-import 'l10n/gen/app_localizations.dart';
+import 'l10n/gen/rerune_app_localizations.dart';
 import 'pages/menu_page.dart';
 
-const _projectId = '699485820fd61693e4cafffd';
-const _apiKey =
-    '5d774ba71a9d3915234733f868a0987fbd0eb065a01365b27216e2dbed436729';
+const _otaPublishId =
+    '74268f4ce18af2b19538b4193200cc58fe63af6ffb300f32aec0683965504232';
 
 void main() {
-  final controller = ReRuneLocalizationController(
-    supportedLocales: AppLocalizations.supportedLocales,
-    projectId: _projectId,
-    apiKey: _apiKey,
-    updatePolicy: const ReRuneUpdatePolicy(checkOnStart: false),
+  ReRune.setup(
+    otaPublishId: _otaPublishId,
+    updatePolicy: const ReRuneUpdatePolicy(checkOnStart: true),
   );
-  controller.initialize();
-  runApp(OtaExampleApp(controller: controller));
+  runApp(const OtaExampleApp());
 }
 
-class OtaExampleApp extends StatefulWidget {
-  const OtaExampleApp({required this.controller, super.key});
-
-  final ReRuneLocalizationController controller;
-
-  @override
-  State<OtaExampleApp> createState() => _OtaExampleAppState();
-}
-
-class _OtaExampleAppState extends State<OtaExampleApp> {
-  @override
-  void dispose() {
-    widget.controller.dispose();
-    super.dispose();
-  }
+class OtaExampleApp extends StatelessWidget {
+  const OtaExampleApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Rerune OTA',
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: MenuPage(controller: widget.controller),
+      localizationsDelegates: ReRune.localizationsDelegates,
+      supportedLocales: ReRune.supportedLocales,
+      home: const MenuPage(),
     );
   }
 }

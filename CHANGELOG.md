@@ -1,5 +1,17 @@
 ## Unreleased
 
+- No changes yet.
+
+## 0.1.0
+
+- BREAKING: removed all `rerune.json` runtime config support.
+- BREAKING: removed `projectId`, `apiKey`, and `manifestUrl` setup/constructor inputs.
+- BREAKING: `ReRuneLocalizationController` now requires `otaPublishId` and sends it as `X-OTA-Publish-Id`.
+- BREAKING: `ReRuneLocalizationController` and typed builder APIs are no longer exported publicly; use generated `ReRune.setup(...)` and `ReRune` static APIs.
+- Manifest endpoint is now fixed to `https://rerune.io/api/sdk/translations/manifest?platform=flutter`.
+- ARB fallback endpoint is now `https://rerune.io/api/sdk/translations/flutter/{locale}` when manifest locale URL is omitted.
+- Example app now uses setup-only integration (no direct controller construction).
+
 ## 0.0.4
 
 - BREAKING: removed seed ARB support (`seedBundles` and `translations_path`).

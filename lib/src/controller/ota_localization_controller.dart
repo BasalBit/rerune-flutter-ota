@@ -3,7 +3,6 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:intl/message_format.dart';
 
@@ -18,25 +17,27 @@ import '../policy/update_policy.dart';
 import '../utils/arb_utils.dart';
 import '../utils/locale_utils.dart';
 
-class ReRuneLocalizationController extends ChangeNotifier {
+class OtaLocalizationController extends ChangeNotifier {
   static final Uri _reruneApiBaseUrl = Uri.parse('https://rerune.io/api');
+  static final Uri _manifestEndpoint = _reruneApiBaseUrl.replace(
+    path: '/api/sdk/translations/manifest',
+    queryParameters: {'platform': 'flutter'},
+  );
 
-  ReRuneLocalizationController({
-    Uri? manifestUrl,
+  OtaLocalizationController({
     required this.supportedLocales,
+    required String otaPublishId,
     ReRuneCacheStore? cacheStore,
     ReRuneUpdatePolicy? updatePolicy,
     ManifestClient? manifestClient,
     ArbClient? arbClient,
-    String? apiKey,
-    String? projectId,
   }) : _cacheStore = cacheStore ?? reRuneCreateDefaultCacheStore(),
        _updatePolicy = updatePolicy ?? const ReRuneUpdatePolicy(),
        _manifestClient = manifestClient ?? const ManifestClient(),
        _arbClient = arbClient ?? const ArbClient(),
-       _apiKeyOverride = apiKey,
-       _projectIdOverride = projectId,
-       _manifestUrlOverride = manifestUrl;
+       _otaPublishId = otaPublishId.trim() {
+    _assertRequiredConfig();
+  }
 
   final List<Locale> supportedLocales;
 
@@ -44,9 +45,7 @@ class ReRuneLocalizationController extends ChangeNotifier {
   final ReRuneUpdatePolicy _updatePolicy;
   final ManifestClient _manifestClient;
   final ArbClient _arbClient;
-  final String? _apiKeyOverride;
-  final String? _projectIdOverride;
-  final Uri? _manifestUrlOverride;
+  final String _otaPublishId;
 
   final Map<String, Map<String, String>> _bundles = {};
   ReRuneCachedManifest? _cachedManifest;
@@ -56,10 +55,6 @@ class ReRuneLocalizationController extends ChangeNotifier {
   final ValueNotifier<int> _fetchedRevisionNotifier = ValueNotifier<int>(0);
   final StreamController<ReRuneTextUpdateEvent> _fetchedTextUpdates =
       StreamController<ReRuneTextUpdateEvent>.broadcast();
-  bool _configResolved = false;
-  String? _apiKey;
-  String? _projectId;
-  Uri? _manifestUrl;
 
   int get revision => _revision;
   int get reRuneFetchedRevision => _fetchedRevision;
@@ -69,7 +64,6 @@ class ReRuneLocalizationController extends ChangeNotifier {
       _fetchedTextUpdates.stream;
 
   Future<void> initialize() async {
-    await _resolveConfig();
     await _loadCachedBundles();
     if (_updatePolicy.checkOnStart) {
       await checkForUpdates();
@@ -120,7 +114,7 @@ class ReRuneLocalizationController extends ChangeNotifier {
   }
 
   Future<ReRuneUpdateResult> checkForUpdates() async {
-    await _resolveConfig();
+    _assertRequiredConfig();
     final updated = <Locale>[];
     final skipped = <Locale>[];
     final errors = <ReRuneError>[];
@@ -139,31 +133,16 @@ class ReRuneLocalizationController extends ChangeNotifier {
       );
     }
 
-    if (_manifestUrl == null) {
-      errors.add(
-        const ReRuneError(
-          type: ReRuneErrorType.invalidManifest,
-          message:
-              'ReRuneManifest URL is missing. Provide projectId/apiKey in constructor or add rerune.json to assets.',
-        ),
-      );
-      return ReRuneUpdateResult(
-        updatedLocales: updated,
-        skippedLocales: skipped,
-        errors: errors,
-      );
-    }
-
     ReRuneManifest? manifest = cachedManifest?.manifest;
     try {
       if (kDebugMode) {
         debugPrint(
-          'OtaLocalization: config apiKey=${_apiKey != null} projectId=$_projectId platform=flutter',
+          'OtaLocalization: using OTA publish id for platform=flutter',
         );
       }
       final result = await _manifestClient
           .fetch(
-            _manifestUrl!,
+            _manifestEndpoint,
             etag: cachedManifest?.etag,
             headers: _authHeaders(),
           )
@@ -250,8 +229,7 @@ class ReRuneLocalizationController extends ChangeNotifier {
           errors.add(
             ReRuneError(
               type: ReRuneErrorType.invalidManifest,
-              message:
-                  'No ARB URL for $key. Provide a locale url in manifest or project_id.',
+              message: 'No ARB URL for $key. Provide a locale url in manifest.',
             ),
           );
           skipped.add(locale);
@@ -350,46 +328,22 @@ class ReRuneLocalizationController extends ChangeNotifier {
     return digest == expected;
   }
 
-  Future<void> _resolveConfig() async {
-    if (_configResolved) {
-      return;
-    }
-    _configResolved = true;
-    final config = await _loadConfigFromAsset();
-    final assetApiKey = _optionalValue(_configString(config, 'api_key'));
-    final assetProjectId = _optionalValue(_configString(config, 'project_id'));
-
-    final apiKeyOverride = _optionalValue(_apiKeyOverride);
-    final projectIdOverride = _optionalValue(_projectIdOverride);
-
-    _apiKey = assetApiKey ?? apiKeyOverride;
-    _projectId = assetProjectId ?? projectIdOverride;
-
-    _resolveManifestUrl();
-    _assertRequiredConfig();
-  }
-
   void _assertRequiredConfig() {
-    if (_apiKey != null && _projectId != null) {
+    if (_otaPublishId.isNotEmpty) {
       return;
     }
 
     const message =
-        'Missing Rerune configuration. Provide `projectId` and `apiKey` '
-        'in ReRuneLocalizationController, or add `rerune.json` to Flutter assets '
-        'with `project_id` and `api_key`.';
+        'Missing Rerune configuration. Call ReRune.setup with a non-empty '
+        '`otaPublishId` before using OTA APIs.';
     if (kDebugMode) {
       debugPrint('OtaLocalization: $message');
     }
     throw StateError(message);
   }
 
-  Map<String, String>? _authHeaders() {
-    final apiKey = _apiKey;
-    if (apiKey == null || apiKey.isEmpty) {
-      return null;
-    }
-    return {'X-API-Key': apiKey};
+  Map<String, String> _authHeaders() {
+    return {'X-OTA-Publish-Id': _otaPublishId};
   }
 
   Uri? _resolveArbUrl(ReRuneManifestLocale entry, String localeKey) {
@@ -398,61 +352,10 @@ class ReRuneLocalizationController extends ChangeNotifier {
       if (url.isAbsolute) {
         return url;
       }
-      final base = _manifestUrl ?? _reruneApiBaseUrl;
-      return base.resolveUri(url);
+      return _manifestEndpoint.resolveUri(url);
     }
-    final projectId = _projectId;
-    if (projectId == null || projectId.isEmpty) {
-      return null;
-    }
-    final path = '/api/sdk/projects/$projectId/translations/flutter/$localeKey';
-    final base = _manifestUrl ?? _reruneApiBaseUrl;
-    return base.replace(path: path, query: null, fragment: null);
-  }
-
-  void _resolveManifestUrl() {
-    if (_manifestUrlOverride != null) {
-      _manifestUrl = _manifestUrlOverride;
-      return;
-    }
-    final projectId = _projectId;
-    final base = _reruneApiBaseUrl;
-    if (projectId == null || projectId.isEmpty) {
-      return;
-    }
-    _manifestUrl = base.replace(
-      path: '/api/sdk/projects/$projectId/translations/manifest',
-      queryParameters: {'platform': 'flutter'},
-    );
-  }
-
-  Future<Map<String, Object?>?> _loadConfigFromAsset() async {
-    try {
-      final jsonString = await rootBundle.loadString('rerune.json');
-      final decoded = jsonDecode(jsonString);
-      if (decoded is Map<String, Object?>) {
-        return decoded;
-      }
-      if (decoded is Map) {
-        return Map<String, Object?>.from(decoded);
-      }
-    } catch (_) {}
-    return null;
-  }
-
-  String? _configString(Map<String, Object?>? config, String key) {
-    final value = config?[key];
-    if (value is! String || value.isEmpty) {
-      return null;
-    }
-    return value;
-  }
-
-  String? _optionalValue(String? value) {
-    if (value == null || value.isEmpty) {
-      return null;
-    }
-    return value;
+    final path = '/api/sdk/translations/flutter/$localeKey';
+    return _reruneApiBaseUrl.replace(path: path, query: null, fragment: null);
   }
 
   @override

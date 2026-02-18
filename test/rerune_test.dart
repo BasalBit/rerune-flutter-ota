@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rerune/rerune.dart';
+import 'package:rerune/src/controller/ota_localization_controller.dart';
 import 'package:rerune/src/network/arb_client.dart';
 import 'package:rerune/src/network/manifest_client.dart';
 
@@ -29,8 +30,9 @@ void main() {
   });
 
   test('controller returns empty bundle when cache is empty', () {
-    final controller = ReRuneLocalizationController(
+    final controller = OtaLocalizationController(
       supportedLocales: const [Locale('en')],
+      otaPublishId: 'publish-id',
     );
 
     final bundle = controller.bundleForLocale(const Locale('en'));
@@ -38,8 +40,9 @@ void main() {
   });
 
   test('controller falls back to bundled string when OTA is unavailable', () {
-    final controller = ReRuneLocalizationController(
+    final controller = OtaLocalizationController(
       supportedLocales: const [Locale('en')],
+      otaPublishId: 'publish-id',
     );
 
     final resolved = controller.resolveText(
@@ -51,19 +54,20 @@ void main() {
     expect(resolved, 'Hello fallback');
   });
 
-  test('controller throws when credentials are missing', () async {
-    final controller = ReRuneLocalizationController(
-      supportedLocales: const [Locale('en')],
+  test('controller throws when otaPublishId is empty', () {
+    expect(
+      () => OtaLocalizationController(
+        supportedLocales: const [Locale('en')],
+        otaPublishId: '',
+      ),
+      throwsA(isA<StateError>()),
     );
-
-    await expectLater(controller.checkForUpdates(), throwsA(isA<StateError>()));
   });
 
   test('controller falls back when manifest request fails', () async {
-    final controller = ReRuneLocalizationController(
+    final controller = OtaLocalizationController(
       supportedLocales: const [Locale('en')],
-      projectId: 'project',
-      apiKey: 'key',
+      otaPublishId: 'publish-id',
       manifestClient: const _ThrowingManifestClient(),
     );
 
@@ -80,10 +84,9 @@ void main() {
   });
 
   test('fetched-only revision and event emit on applied update', () async {
-    final controller = ReRuneLocalizationController(
+    final controller = OtaLocalizationController(
       supportedLocales: const [Locale('en')],
-      projectId: 'project',
-      apiKey: 'key',
+      otaPublishId: 'publish-id',
       cacheStore: _MemoryCacheStore(),
       manifestClient: _StubManifestClient(
         result: ManifestFetchResult(
@@ -124,6 +127,46 @@ void main() {
     expect(event.updatedLocales, const [Locale('en')]);
   });
 
+  test('controller sends ota publish id header', () async {
+    Map<String, String>? manifestHeaders;
+    Map<String, String>? arbHeaders;
+    final controller = OtaLocalizationController(
+      supportedLocales: const [Locale('en')],
+      otaPublishId: 'publish-id',
+      cacheStore: _MemoryCacheStore(),
+      manifestClient: _StubManifestClient(
+        result: ManifestFetchResult(
+          manifest: ReRuneManifest.fromJson({
+            'version': 1,
+            'locales': {
+              'en': {'version': 1},
+            },
+          }),
+          etag: 'manifest-v1',
+          notModified: false,
+        ),
+        onFetch: (_, __, headers) {
+          manifestHeaders = headers;
+        },
+      ),
+      arbClient: _StubArbClient(
+        result: const ArbFetchResult(
+          data: '{"title":"Hello OTA"}',
+          etag: 'arb-v1',
+          notModified: false,
+        ),
+        onFetch: (_, __, headers) {
+          arbHeaders = headers;
+        },
+      ),
+    );
+
+    await controller.checkForUpdates();
+
+    expect(manifestHeaders?['X-OTA-Publish-Id'], 'publish-id');
+    expect(arbHeaders?['X-OTA-Publish-Id'], 'publish-id');
+  });
+
   test(
     'fetched-only signal does not emit when manifest is unchanged',
     () async {
@@ -144,10 +187,9 @@ void main() {
           ),
         },
       );
-      final controller = ReRuneLocalizationController(
+      final controller = OtaLocalizationController(
         supportedLocales: const [Locale('en')],
-        projectId: 'project',
-        apiKey: 'key',
+        otaPublishId: 'publish-id',
         cacheStore: cacheStore,
         manifestClient: _StubManifestClient(
           result: const ManifestFetchResult(notModified: true),
@@ -173,10 +215,9 @@ void main() {
   );
 
   test('fetched-only signal does not emit on fetch errors', () async {
-    final controller = ReRuneLocalizationController(
+    final controller = OtaLocalizationController(
       supportedLocales: const [Locale('en')],
-      projectId: 'project',
-      apiKey: 'key',
+      otaPublishId: 'publish-id',
       cacheStore: _MemoryCacheStore(),
       manifestClient: const _ThrowingManifestClient(),
     );
@@ -197,10 +238,9 @@ void main() {
   });
 
   test('initialize cache load does not change fetched-only revision', () async {
-    final controller = ReRuneLocalizationController(
+    final controller = OtaLocalizationController(
       supportedLocales: const [Locale('en')],
-      projectId: 'project',
-      apiKey: 'key',
+      otaPublishId: 'publish-id',
       cacheStore: _MemoryCacheStore(
         arbs: {
           'en': const ReRuneCachedArb(
@@ -239,10 +279,12 @@ class _ThrowingManifestClient extends ManifestClient {
 }
 
 class _StubManifestClient extends ManifestClient {
-  _StubManifestClient({this.result, this.error});
+  _StubManifestClient({this.result, this.error, this.onFetch});
 
   final ManifestFetchResult? result;
   final Object? error;
+  final void Function(Uri url, String? etag, Map<String, String>? headers)?
+  onFetch;
 
   @override
   Future<ManifestFetchResult> fetch(
@@ -250,6 +292,7 @@ class _StubManifestClient extends ManifestClient {
     String? etag,
     Map<String, String>? headers,
   }) async {
+    onFetch?.call(url, etag, headers);
     if (error != null) {
       throw error!;
     }
@@ -258,10 +301,12 @@ class _StubManifestClient extends ManifestClient {
 }
 
 class _StubArbClient extends ArbClient {
-  _StubArbClient({this.result, this.error});
+  _StubArbClient({this.result, this.error, this.onFetch});
 
   final ArbFetchResult? result;
   final Object? error;
+  final void Function(Uri url, String? etag, Map<String, String>? headers)?
+  onFetch;
 
   @override
   Future<ArbFetchResult> fetch(
@@ -269,6 +314,7 @@ class _StubArbClient extends ArbClient {
     String? etag,
     Map<String, String>? headers,
   }) async {
+    onFetch?.call(url, etag, headers);
     if (error != null) {
       throw error!;
     }

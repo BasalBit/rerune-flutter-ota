@@ -11,3 +11,8 @@
 
 ## Migration rule
 - If a touched public API does not follow these naming rules, rename it and document the change in `CHANGELOG.md`.
+
+## Session continuity rule
+- Always read `docs/sessions/README.md` and the latest files in `docs/sessions/*.md` before starting implementation.
+- Treat `docs/sessions/*.md` as historical context for what was done and why; use that context to preserve standards and direction.
+- For significant decisions or migrations, add/update a session note in `docs/sessions/` so future sessions can continue consistently.

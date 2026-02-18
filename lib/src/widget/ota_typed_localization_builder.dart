@@ -2,35 +2,35 @@ import 'package:flutter/widgets.dart';
 
 import '../controller/ota_localization_controller.dart';
 
-typedef ReRuneDelegateFactory<T> =
+typedef OtaTypedDelegateFactory<T> =
     LocalizationsDelegate<T> Function(
       BuildContext context,
-      ReRuneLocalizationController controller,
+      OtaLocalizationController controller,
       int revision,
     );
 
-typedef ReRuneLocalizationWidgetBuilder<T> =
+typedef OtaTypedLocalizationWidgetBuilder<T> =
     Widget Function(BuildContext context, LocalizationsDelegate<T> delegate);
 
-enum ReRuneLocalizationRefreshMode { anyControllerChange, fetchedUpdatesOnly }
+enum OtaLocalizationRefreshMode { anyControllerChange, fetchedUpdatesOnly }
 
-class ReRuneBuilder<T> extends StatelessWidget {
-  const ReRuneBuilder({
+class OtaTypedLocalizationBuilder<T> extends StatelessWidget {
+  const OtaTypedLocalizationBuilder({
     super.key,
     required this.controller,
     required this.delegateFactory,
     required this.builder,
-    this.refreshMode = ReRuneLocalizationRefreshMode.anyControllerChange,
+    this.refreshMode = OtaLocalizationRefreshMode.anyControllerChange,
   });
 
-  final ReRuneLocalizationController controller;
-  final ReRuneDelegateFactory<T> delegateFactory;
-  final ReRuneLocalizationWidgetBuilder<T> builder;
-  final ReRuneLocalizationRefreshMode refreshMode;
+  final OtaLocalizationController controller;
+  final OtaTypedDelegateFactory<T> delegateFactory;
+  final OtaTypedLocalizationWidgetBuilder<T> builder;
+  final OtaLocalizationRefreshMode refreshMode;
 
   @override
   Widget build(BuildContext context) {
-    if (refreshMode == ReRuneLocalizationRefreshMode.fetchedUpdatesOnly) {
+    if (refreshMode == OtaLocalizationRefreshMode.fetchedUpdatesOnly) {
       return ValueListenableBuilder<int>(
         valueListenable: controller.reRuneFetchedRevisionListenable,
         builder: (context, fetchedRevision, _) {

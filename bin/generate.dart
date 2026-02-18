@@ -386,19 +386,19 @@ String? _generateWrapper({
           .toList(growable: false);
 
   final buffer = StringBuffer();
+  buffer.writeln("import 'package:flutter/foundation.dart';");
   buffer.writeln("import 'package:flutter/widgets.dart';");
   buffer.writeln("import 'package:rerune/rerune.dart';");
+  buffer.writeln(
+    "import 'package:rerune/src/controller/ota_localization_controller.dart';",
+  );
   buffer.writeln('');
   buffer.writeln("import '$appLocalizationsImport';");
   buffer.writeln('');
   buffer.writeln(
     'class Rerune${className}Delegate extends LocalizationsDelegate<$className> {',
   );
-  buffer.writeln(
-    '  const Rerune${className}Delegate({required this.controller});',
-  );
-  buffer.writeln('');
-  buffer.writeln('  final ReRuneLocalizationController controller;');
+  buffer.writeln('  const Rerune${className}Delegate();');
   buffer.writeln('');
   buffer.writeln('  @override');
   buffer.writeln(
@@ -408,15 +408,15 @@ String? _generateWrapper({
   buffer.writeln('  @override');
   buffer.writeln('  Future<$className> load(Locale locale) async {');
   buffer.writeln('    final base = await $className.delegate.load(locale);');
-  buffer.writeln('    return _Rerune$className(base, controller, locale);');
+  buffer.writeln(
+    '    return _Rerune$className(base, ReRune._requireController(), locale);',
+  );
   buffer.writeln('  }');
   buffer.writeln('');
   buffer.writeln('  @override');
   buffer.writeln(
-    '  bool shouldReload(covariant Rerune${className}Delegate old) {',
+    '  bool shouldReload(covariant Rerune${className}Delegate old) => false;',
   );
-  buffer.writeln('    return old.controller != controller;');
-  buffer.writeln('  }');
   buffer.writeln('}');
   buffer.writeln('');
   buffer.writeln('class _Rerune$className extends $className {');
@@ -425,7 +425,7 @@ String? _generateWrapper({
   );
   buffer.writeln('');
   buffer.writeln('  final $className _base;');
-  buffer.writeln('  final ReRuneLocalizationController _controller;');
+  buffer.writeln('  final OtaLocalizationController _controller;');
   buffer.writeln('  final Locale _locale;');
 
   for (final getter in getters) {
@@ -466,20 +466,16 @@ String? _generateWrapper({
   buffer.writeln('}');
   buffer.writeln('');
   buffer.writeln('class ReRune {');
-  buffer.writeln('  static ReRuneLocalizationController? _controller;');
+  buffer.writeln('  static OtaLocalizationController? _controller;');
   buffer.writeln('');
   buffer.writeln('  static void setup({');
-  buffer.writeln('    String? projectId,');
-  buffer.writeln('    String? apiKey,');
-  buffer.writeln('    Uri? manifestUrl,');
+  buffer.writeln('    required String otaPublishId,');
   buffer.writeln('    ReRuneCacheStore? cacheStore,');
   buffer.writeln('    ReRuneUpdatePolicy? updatePolicy,');
   buffer.writeln('  }) {');
-  buffer.writeln('    final controller = ReRuneLocalizationController(');
+  buffer.writeln('    final controller = OtaLocalizationController(');
   buffer.writeln('      supportedLocales: $className.supportedLocales,');
-  buffer.writeln('      projectId: projectId,');
-  buffer.writeln('      apiKey: apiKey,');
-  buffer.writeln('      manifestUrl: manifestUrl,');
+  buffer.writeln('      otaPublishId: otaPublishId,');
   buffer.writeln('      cacheStore: cacheStore,');
   buffer.writeln('      updatePolicy: updatePolicy,');
   buffer.writeln('    );');
@@ -489,20 +485,31 @@ String? _generateWrapper({
   buffer.writeln('    controller.initialize();');
   buffer.writeln('  }');
   buffer.writeln('');
-  buffer.writeln(
-    '  static ReRuneLocalizationController get controller => _requireController();',
-  );
-  buffer.writeln('');
   buffer.writeln('  static Future<ReRuneUpdateResult> checkForUpdates() {');
   buffer.writeln('    return _requireController().checkForUpdates();');
   buffer.writeln('  }');
   buffer.writeln('');
   buffer.writeln(
+    '  static Stream<ReRuneTextUpdateEvent> get onFetchedTextsApplied {',
+  );
+  buffer.writeln(
+    '    return _requireController().onReRuneFetchedTextsApplied;',
+  );
+  buffer.writeln('  }');
+  buffer.writeln('');
+  buffer.writeln(
+    '  static ValueListenable<int> get fetchedRevisionListenable {',
+  );
+  buffer.writeln(
+    '    return _requireController().reRuneFetchedRevisionListenable;',
+  );
+  buffer.writeln('  }');
+  buffer.writeln('');
+  buffer.writeln(
     '  static List<LocalizationsDelegate<dynamic>> get localizationsDelegates {',
   );
-  buffer.writeln('    final controller = _requireController();');
   buffer.writeln('    return [');
-  buffer.writeln('      Rerune${className}Delegate(controller: controller),');
+  buffer.writeln('      const Rerune${className}Delegate(),');
   buffer.writeln(
     '      ...$className.localizationsDelegates.where((delegate) => delegate.type != $className),',
   );
@@ -513,9 +520,7 @@ String? _generateWrapper({
     '  static List<Locale> get supportedLocales => $className.supportedLocales;',
   );
   buffer.writeln('');
-  buffer.writeln(
-    '  static ReRuneLocalizationController _requireController() {',
-  );
+  buffer.writeln('  static OtaLocalizationController _requireController() {');
   buffer.writeln('    final current = _controller;');
   buffer.writeln('    if (current != null) {');
   buffer.writeln('      return current;');

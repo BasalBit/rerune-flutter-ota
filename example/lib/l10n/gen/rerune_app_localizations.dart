@@ -1,13 +1,13 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:rerune/rerune.dart';
+import 'package:rerune/src/controller/ota_localization_controller.dart';
 
 import 'app_localizations.dart';
 
 class ReruneAppLocalizationsDelegate
     extends LocalizationsDelegate<AppLocalizations> {
-  const ReruneAppLocalizationsDelegate({required this.controller});
-
-  final ReRuneLocalizationController controller;
+  const ReruneAppLocalizationsDelegate();
 
   @override
   bool isSupported(Locale locale) =>
@@ -16,13 +16,11 @@ class ReruneAppLocalizationsDelegate
   @override
   Future<AppLocalizations> load(Locale locale) async {
     final base = await AppLocalizations.delegate.load(locale);
-    return _ReruneAppLocalizations(base, controller, locale);
+    return _ReruneAppLocalizations(base, ReRune._requireController(), locale);
   }
 
   @override
-  bool shouldReload(covariant ReruneAppLocalizationsDelegate old) {
-    return old.controller != controller;
-  }
+  bool shouldReload(covariant ReruneAppLocalizationsDelegate old) => false;
 }
 
 class _ReruneAppLocalizations extends AppLocalizations {
@@ -30,7 +28,7 @@ class _ReruneAppLocalizations extends AppLocalizations {
     : super(_base.localeName);
 
   final AppLocalizations _base;
-  final ReRuneLocalizationController _controller;
+  final OtaLocalizationController _controller;
   final Locale _locale;
 
   @override
@@ -53,20 +51,16 @@ class _ReruneAppLocalizations extends AppLocalizations {
 }
 
 class ReRune {
-  static ReRuneLocalizationController? _controller;
+  static OtaLocalizationController? _controller;
 
   static void setup({
-    String? projectId,
-    String? apiKey,
-    Uri? manifestUrl,
+    required String otaPublishId,
     ReRuneCacheStore? cacheStore,
     ReRuneUpdatePolicy? updatePolicy,
   }) {
-    final controller = ReRuneLocalizationController(
+    final controller = OtaLocalizationController(
       supportedLocales: AppLocalizations.supportedLocales,
-      projectId: projectId,
-      apiKey: apiKey,
-      manifestUrl: manifestUrl,
+      otaPublishId: otaPublishId,
       cacheStore: cacheStore,
       updatePolicy: updatePolicy,
     );
@@ -76,16 +70,21 @@ class ReRune {
     controller.initialize();
   }
 
-  static ReRuneLocalizationController get controller => _requireController();
-
   static Future<ReRuneUpdateResult> checkForUpdates() {
     return _requireController().checkForUpdates();
   }
 
+  static Stream<ReRuneTextUpdateEvent> get onFetchedTextsApplied {
+    return _requireController().onReRuneFetchedTextsApplied;
+  }
+
+  static ValueListenable<int> get fetchedRevisionListenable {
+    return _requireController().reRuneFetchedRevisionListenable;
+  }
+
   static List<LocalizationsDelegate<dynamic>> get localizationsDelegates {
-    final controller = _requireController();
     return [
-      ReruneAppLocalizationsDelegate(controller: controller),
+      const ReruneAppLocalizationsDelegate(),
       ...AppLocalizations.localizationsDelegates.where(
         (delegate) => delegate.type != AppLocalizations,
       ),
@@ -94,7 +93,7 @@ class ReRune {
 
   static List<Locale> get supportedLocales => AppLocalizations.supportedLocales;
 
-  static ReRuneLocalizationController _requireController() {
+  static OtaLocalizationController _requireController() {
     final current = _controller;
     if (current != null) {
       return current;
