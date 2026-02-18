@@ -1,5 +1,7 @@
 ## Unreleased
 
+## 0.0.4
+
 - BREAKING: removed seed ARB support (`seedBundles` and `translations_path`).
 - Fallback now follows Flutter defaults only: OTA/cache first, then bundled `AppLocalizations` strings.
 - BREAKING: runtime config now uses strict precedence `rerune.json` asset -> constructor (`projectId`, `apiKey`).

@@ -15,7 +15,7 @@ Add the package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  rerune: ^0.0.3
+  rerune: ^0.0.4
 ```
 
 Provide credentials using one of these options:
