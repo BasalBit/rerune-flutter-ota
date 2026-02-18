@@ -50,6 +50,32 @@ class _ReruneAppLocalizations extends AppLocalizations {
   }
 }
 
+enum ReRuneRefreshMode { fetchedUpdatesOnly, anyControllerChange }
+
+class ReRuneBuilder extends StatelessWidget {
+  const ReRuneBuilder({
+    super.key,
+    required this.builder,
+    this.refreshMode = ReRuneRefreshMode.fetchedUpdatesOnly,
+  });
+
+  final Widget Function(BuildContext context) builder;
+  final ReRuneRefreshMode refreshMode;
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = ReRune._requireController();
+    final Listenable animation =
+        refreshMode == ReRuneRefreshMode.anyControllerChange
+        ? controller
+        : controller.reRuneFetchedRevisionListenable;
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, _) => builder(context),
+    );
+  }
+}
+
 class ReRune {
   static OtaLocalizationController? _controller;
 

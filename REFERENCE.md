@@ -10,7 +10,7 @@ This document is a compact reference of all completed changes in the current wor
   - `ReRune.fetchedRevisionListenable`
   - `ReRune.onFetchedTextsApplied`
 - New event model: `ReRuneTextUpdateEvent`.
-- Builder-level opt-in refresh mode: `ReRuneLocalizationRefreshMode.fetchedUpdatesOnly`.
+- Generated wrapper widget: `ReRuneBuilder` with `ReRuneRefreshMode`.
 
 Important behavior: immediate refresh is optional. Existing consumers are not forced into fetched-only refresh.
 
@@ -29,9 +29,8 @@ All consumer-facing APIs were aligned to `ReRune*` / `reRune*` naming rules.
 - `CachedArb` -> `ReRuneCachedArb`
 - `CacheStore` -> `ReRuneCacheStore`
 - `createDefaultCacheStore()` -> `reRuneCreateDefaultCacheStore()`
-- `OtaTypedLocalizationBuilder<T>` -> `ReRuneBuilder<T>`
-- `OtaTypedDelegateFactory<T>` -> `ReRuneDelegateFactory<T>`
-- `OtaTypedLocalizationWidgetBuilder<T>` -> `ReRuneLocalizationWidgetBuilder<T>`
+- `OtaTypedLocalizationBuilder<T>` and related typedefs are internal-only.
+- Consumer-facing rebuild helper is generated as `ReRuneBuilder` in `rerune_app_localizations.dart`.
 
 Config/auth breaking changes:
 
@@ -56,15 +55,16 @@ Example now demonstrates three refresh strategies from a menu:
    - "Check for updates" only checks and shows result in `SnackBar`.
    - "Refresh page" explicitly re-reads and redraws text.
 2. Event listener page (`EventListenerPage`)
-   - Listens to `onReRuneFetchedTextsApplied` and updates with `setState`.
+   - Listens to `ReRune.onFetchedTextsApplied` and updates with `setState`.
 3. Builder page (`BuilderPage`)
-   - Uses `ReRuneBuilder` with `fetchedUpdatesOnly` mode.
+   - Uses generated `ReRuneBuilder` (defaults to fetched-updates-only redraw).
 
 Pages were split into separate files under `example/lib/pages/`.
 
 ## 4) Generator and integration updates
 
 - `bin/generate.dart` updated to emit renamed `ReRune*` API types.
+- `bin/generate.dart` now emits a generated `ReRuneBuilder` widget for simple OTA-driven redraws.
 - Generated sample wrapper updated accordingly:
   - `example/lib/l10n/gen/rerune_app_localizations.dart`
 - Public export updated for event model:

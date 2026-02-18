@@ -465,6 +465,38 @@ String? _generateWrapper({
   }
   buffer.writeln('}');
   buffer.writeln('');
+  buffer.writeln(
+    'enum ReRuneRefreshMode { fetchedUpdatesOnly, anyControllerChange }',
+  );
+  buffer.writeln('');
+  buffer.writeln('class ReRuneBuilder extends StatelessWidget {');
+  buffer.writeln('  const ReRuneBuilder({');
+  buffer.writeln('    super.key,');
+  buffer.writeln('    required this.builder,');
+  buffer.writeln(
+    '    this.refreshMode = ReRuneRefreshMode.fetchedUpdatesOnly,',
+  );
+  buffer.writeln('  });');
+  buffer.writeln('');
+  buffer.writeln('  final Widget Function(BuildContext context) builder;');
+  buffer.writeln('  final ReRuneRefreshMode refreshMode;');
+  buffer.writeln('');
+  buffer.writeln('  @override');
+  buffer.writeln('  Widget build(BuildContext context) {');
+  buffer.writeln('    final controller = ReRune._requireController();');
+  buffer.writeln('    final Listenable animation =');
+  buffer.writeln(
+    '        refreshMode == ReRuneRefreshMode.anyControllerChange',
+  );
+  buffer.writeln('            ? controller');
+  buffer.writeln('            : controller.reRuneFetchedRevisionListenable;');
+  buffer.writeln('    return AnimatedBuilder(');
+  buffer.writeln('      animation: animation,');
+  buffer.writeln('      builder: (context, _) => builder(context),');
+  buffer.writeln('    );');
+  buffer.writeln('  }');
+  buffer.writeln('}');
+  buffer.writeln('');
   buffer.writeln('class ReRune {');
   buffer.writeln('  static OtaLocalizationController? _controller;');
   buffer.writeln('');

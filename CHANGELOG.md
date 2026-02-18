@@ -2,6 +2,13 @@
 
 - No changes yet.
 
+## 0.1.1
+
+- Added generated `ReRuneBuilder` widget for app-side redraws after OTA changes.
+- `ReRuneBuilder` now uses `builder:` (Flutter convention) instead of `child:`.
+- `ReRuneBuilder` supports `ReRuneRefreshMode.fetchedUpdatesOnly` (default) and `ReRuneRefreshMode.anyControllerChange`.
+- Updated generated wrapper template and example `BuilderPage` to use `ReRuneBuilder` instead of manual `ValueListenableBuilder` wiring.
+
 ## 0.1.0
 
 - BREAKING: removed all `rerune.json` runtime config support.

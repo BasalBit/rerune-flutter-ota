@@ -15,7 +15,7 @@ Add the package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  rerune: ^0.1.0
+  rerune: ^0.1.1
 ```
 
 Provide your publish identifier through setup:
@@ -87,20 +87,23 @@ The runtime always uses `https://rerune.io/api` for manifest and translation req
 This behavior is opt-in. Existing integrations keep the current behavior unless
 you explicitly use the new APIs.
 
-- `ReRune.fetchedRevisionListenable`
+- `ReRuneBuilder`
 - `ReRune.onFetchedTextsApplied`
+- `ReRune.fetchedRevisionListenable`
 
-Use fetched-only refresh mode when you want rebuilds only after newly fetched
-translations are applied (not when cached bundles are loaded at startup).
+Use `ReRuneBuilder` when you want simple rebuilds after fetched OTA text updates:
 
 ```dart
-ValueListenableBuilder<int>(
-  valueListenable: ReRune.fetchedRevisionListenable,
-  builder: (context, _, __) {
-    return const MyHomePage();
+ReRuneBuilder(
+  builder: (context) {
+    final t = AppLocalizations.of(context)!;
+    return Text(t.title);
   },
 )
 ```
+
+`ReRuneBuilder` defaults to fetched-updates-only refresh. You can opt into any
+controller change with `refreshMode: ReRuneRefreshMode.anyControllerChange`.
 
 You can also subscribe directly:
 

@@ -13,6 +13,7 @@ How to use:
 - Refer to older session files for deeper design/implementation rationale.
 
 Current session files:
+- `2026-02-18-rerune-builder-wrapper.md`
 - `2026-02-18-compacted-history.md`
 - `1771371213524-crisp-circuit.md`
 - `1771342052975-happy-river.md`
