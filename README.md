@@ -26,7 +26,7 @@ Provide credentials using one of these options:
 Configuration precedence is strict: `rerune.json` (asset) takes priority over
 constructor values.
 
-If neither source is provided, `OtaLocalizationController` throws a
+If neither source is provided, `ReRuneLocalizationController` throws a
 `StateError` and logs a debug message describing the required setup.
 
 If you use `rerune.json`, include it in `flutter.assets`:
@@ -97,10 +97,47 @@ This is the complete app-side integration surface.
 If you do not include `rerune.json` in assets, provide both `projectId` and
 `apiKey` to `ReRune.setup(...)`.
 
-`OtaUpdatePolicy` defaults to `checkOnStart: true`.
+`ReRuneUpdatePolicy` defaults to `checkOnStart: true`.
 
-`OtaLocalizationController` always uses `https://rerune.io/api` for manifest and
+`ReRuneLocalizationController` always uses `https://rerune.io/api` for manifest and
 translation requests.
+
+## Optional immediate refresh for fetched OTA changes
+
+This behavior is opt-in. Existing integrations keep the current behavior unless
+you explicitly use the new APIs.
+
+- `ReRuneLocalizationController.reRuneFetchedRevisionListenable`
+- `ReRuneLocalizationController.onReRuneFetchedTextsApplied`
+- `ReRuneBuilder(refreshMode: ReRuneLocalizationRefreshMode.fetchedUpdatesOnly)`
+
+Use fetched-only refresh mode when you want rebuilds only after newly fetched
+translations are applied (not when cached bundles are loaded at startup).
+
+```dart
+ReRuneBuilder<AppLocalizations>(
+  controller: controller,
+  refreshMode: ReRuneLocalizationRefreshMode.fetchedUpdatesOnly,
+  delegateFactory: (context, controller, revision) {
+    return ReruneAppLocalizationsDelegate(controller: controller);
+  },
+  builder: (context, delegate) {
+    return Localizations.override(
+      context: context,
+      delegates: [delegate],
+      child: const MyHomePage(),
+    );
+  },
+);
+```
+
+You can also subscribe directly:
+
+```dart
+final sub = controller.onReRuneFetchedTextsApplied.listen((event) {
+  debugPrint('Applied OTA text revision ${event.revision}: ${event.updatedLocales}');
+});
+```
 
 ## Manifest format
 

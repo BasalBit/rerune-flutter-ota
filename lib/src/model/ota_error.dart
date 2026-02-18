@@ -1,14 +1,14 @@
-enum OtaErrorType { network, parse, storage, checksum, invalidManifest }
+enum ReRuneErrorType { network, parse, storage, checksum, invalidManifest }
 
-class OtaError {
-  const OtaError({
+class ReRuneError {
+  const ReRuneError({
     required this.type,
     required this.message,
     this.cause,
     this.stackTrace,
   });
 
-  final OtaErrorType type;
+  final ReRuneErrorType type;
   final String message;
   final Object? cause;
   final StackTrace? stackTrace;

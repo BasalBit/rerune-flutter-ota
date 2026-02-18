@@ -12,7 +12,7 @@ class ManifestFetchResult {
     required this.notModified,
   });
 
-  final Manifest? manifest;
+  final ReRuneManifest? manifest;
   final String? etag;
   final bool notModified;
 }
@@ -59,16 +59,16 @@ class ManifestClient {
       }
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw http.ClientException(
-          'Manifest request failed (${response.statusCode}).',
+          'ReRuneManifest request failed (${response.statusCode}).',
           url,
         );
       }
       final decoded = jsonDecode(response.body);
       if (decoded is! Map<String, Object?>) {
-        throw const FormatException('Manifest JSON must be an object.');
+        throw const FormatException('ReRuneManifest JSON must be an object.');
       }
       return ManifestFetchResult(
-        manifest: Manifest.fromJson(decoded),
+        manifest: ReRuneManifest.fromJson(decoded),
         etag: response.headers['etag'],
         notModified: false,
       );

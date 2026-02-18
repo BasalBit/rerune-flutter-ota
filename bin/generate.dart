@@ -398,7 +398,7 @@ String? _generateWrapper({
     '  const Rerune${className}Delegate({required this.controller});',
   );
   buffer.writeln('');
-  buffer.writeln('  final OtaLocalizationController controller;');
+  buffer.writeln('  final ReRuneLocalizationController controller;');
   buffer.writeln('');
   buffer.writeln('  @override');
   buffer.writeln(
@@ -425,7 +425,7 @@ String? _generateWrapper({
   );
   buffer.writeln('');
   buffer.writeln('  final $className _base;');
-  buffer.writeln('  final OtaLocalizationController _controller;');
+  buffer.writeln('  final ReRuneLocalizationController _controller;');
   buffer.writeln('  final Locale _locale;');
 
   for (final getter in getters) {
@@ -466,16 +466,16 @@ String? _generateWrapper({
   buffer.writeln('}');
   buffer.writeln('');
   buffer.writeln('class ReRune {');
-  buffer.writeln('  static OtaLocalizationController? _controller;');
+  buffer.writeln('  static ReRuneLocalizationController? _controller;');
   buffer.writeln('');
   buffer.writeln('  static void setup({');
   buffer.writeln('    String? projectId,');
   buffer.writeln('    String? apiKey,');
   buffer.writeln('    Uri? manifestUrl,');
-  buffer.writeln('    CacheStore? cacheStore,');
-  buffer.writeln('    OtaUpdatePolicy? updatePolicy,');
+  buffer.writeln('    ReRuneCacheStore? cacheStore,');
+  buffer.writeln('    ReRuneUpdatePolicy? updatePolicy,');
   buffer.writeln('  }) {');
-  buffer.writeln('    final controller = OtaLocalizationController(');
+  buffer.writeln('    final controller = ReRuneLocalizationController(');
   buffer.writeln('      supportedLocales: $className.supportedLocales,');
   buffer.writeln('      projectId: projectId,');
   buffer.writeln('      apiKey: apiKey,');
@@ -490,10 +490,10 @@ String? _generateWrapper({
   buffer.writeln('  }');
   buffer.writeln('');
   buffer.writeln(
-    '  static OtaLocalizationController get controller => _requireController();',
+    '  static ReRuneLocalizationController get controller => _requireController();',
   );
   buffer.writeln('');
-  buffer.writeln('  static Future<OtaUpdateResult> checkForUpdates() {');
+  buffer.writeln('  static Future<ReRuneUpdateResult> checkForUpdates() {');
   buffer.writeln('    return _requireController().checkForUpdates();');
   buffer.writeln('  }');
   buffer.writeln('');
@@ -513,7 +513,9 @@ String? _generateWrapper({
     '  static List<Locale> get supportedLocales => $className.supportedLocales;',
   );
   buffer.writeln('');
-  buffer.writeln('  static OtaLocalizationController _requireController() {');
+  buffer.writeln(
+    '  static ReRuneLocalizationController _requireController() {',
+  );
   buffer.writeln('    final current = _controller;');
   buffer.writeln('    if (current != null) {');
   buffer.writeln('      return current;');

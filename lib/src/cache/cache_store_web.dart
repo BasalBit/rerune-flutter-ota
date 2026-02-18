@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../model/manifest.dart';
 import 'cache_store_base.dart';
 
-class WebCacheStore extends CacheStore {
+class WebCacheStore extends ReRuneCacheStore {
   const WebCacheStore({this.prefix = 'ota_localizations'});
 
   final String prefix;
@@ -15,7 +15,7 @@ class WebCacheStore extends CacheStore {
   String _etagKey(String localeKey) => '${prefix}_arb_etag_$localeKey';
 
   @override
-  Future<CachedManifest?> readManifest() async {
+  Future<ReRuneCachedManifest?> readManifest() async {
     final prefs = await SharedPreferences.getInstance();
     final value = prefs.getString(_manifestKey());
     if (value == null) {
@@ -25,28 +25,28 @@ class WebCacheStore extends CacheStore {
     if (decoded is! Map<String, Object?>) {
       return null;
     }
-    return CachedManifest.fromJson(decoded);
+    return ReRuneCachedManifest.fromJson(decoded);
   }
 
   @override
-  Future<void> writeManifest(CachedManifest manifest) async {
+  Future<void> writeManifest(ReRuneCachedManifest manifest) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_manifestKey(), jsonEncode(manifest.toJson()));
   }
 
   @override
-  Future<CachedArb?> readArb(String localeKey) async {
+  Future<ReRuneCachedArb?> readArb(String localeKey) async {
     final prefs = await SharedPreferences.getInstance();
     final data = prefs.getString(_arbKey(localeKey));
     if (data == null) {
       return null;
     }
     final etag = prefs.getString(_etagKey(localeKey));
-    return CachedArb(data: data, etag: etag);
+    return ReRuneCachedArb(data: data, etag: etag);
   }
 
   @override
-  Future<void> writeArb(String localeKey, CachedArb arb) async {
+  Future<void> writeArb(String localeKey, ReRuneCachedArb arb) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_arbKey(localeKey), arb.data);
     if (arb.etag == null) {
@@ -57,4 +57,4 @@ class WebCacheStore extends CacheStore {
   }
 }
 
-CacheStore createCacheStore() => const WebCacheStore();
+ReRuneCacheStore createCacheStore() => const WebCacheStore();

@@ -10,7 +10,7 @@ API.
 - `ReRune.localizationsDelegates` and `ReRune.supportedLocales` are ready to use in `MaterialApp`.
 - If `rerune.json` is used, add it to `flutter.assets`; it overrides constructor values.
 - If neither constructor credentials nor asset config is present, controller throws a `StateError`.
-- `OtaUpdatePolicy` defaults to `checkOnStart: true`.
+- `ReRuneUpdatePolicy` defaults to `checkOnStart: true`.
 - The UI keeps using generated `AppLocalizations` getters.
 
 ## Run

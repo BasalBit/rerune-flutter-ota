@@ -1,11 +1,11 @@
 import '../model/manifest.dart';
 
-abstract class CacheStore {
-  const CacheStore();
+abstract class ReRuneCacheStore {
+  const ReRuneCacheStore();
 
-  Future<CachedManifest?> readManifest();
-  Future<void> writeManifest(CachedManifest manifest);
+  Future<ReRuneCachedManifest?> readManifest();
+  Future<void> writeManifest(ReRuneCachedManifest manifest);
 
-  Future<CachedArb?> readArb(String localeKey);
-  Future<void> writeArb(String localeKey, CachedArb arb);
+  Future<ReRuneCachedArb?> readArb(String localeKey);
+  Future<void> writeArb(String localeKey, ReRuneCachedArb arb);
 }

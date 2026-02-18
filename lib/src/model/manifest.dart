@@ -1,30 +1,36 @@
 import 'dart:convert';
 
-class Manifest {
-  const Manifest({required this.version, required this.locales});
+class ReRuneManifest {
+  const ReRuneManifest({required this.version, required this.locales});
 
   final int version;
-  final Map<String, ManifestLocale> locales;
+  final Map<String, ReRuneManifestLocale> locales;
 
-  factory Manifest.fromJson(Map<String, Object?> json) {
+  factory ReRuneManifest.fromJson(Map<String, Object?> json) {
     final version = json['version'];
     if (version is! int) {
-      throw const FormatException('Manifest version is missing or invalid.');
+      throw const FormatException(
+        'ReRuneManifest version is missing or invalid.',
+      );
     }
     final localesJson = json['locales'];
     if (localesJson is! Map) {
-      throw const FormatException('Manifest locales are missing or invalid.');
+      throw const FormatException(
+        'ReRuneManifest locales are missing or invalid.',
+      );
     }
-    final locales = <String, ManifestLocale>{};
+    final locales = <String, ReRuneManifestLocale>{};
     for (final entry in localesJson.entries) {
       final key = entry.key;
       final value = entry.value;
       if (key is! String || value is! Map) {
         continue;
       }
-      locales[key] = ManifestLocale.fromJson(Map<String, Object?>.from(value));
+      locales[key] = ReRuneManifestLocale.fromJson(
+        Map<String, Object?>.from(value),
+      );
     }
-    return Manifest(version: version, locales: locales);
+    return ReRuneManifest(version: version, locales: locales);
   }
 
   Map<String, Object?> toJson() {
@@ -34,26 +40,26 @@ class Manifest {
     };
   }
 
-  static Manifest fromString(String value) {
+  static ReRuneManifest fromString(String value) {
     final decoded = jsonDecode(value);
     if (decoded is! Map<String, Object?>) {
-      throw const FormatException('Manifest JSON must be an object.');
+      throw const FormatException('ReRuneManifest JSON must be an object.');
     }
-    return Manifest.fromJson(decoded);
+    return ReRuneManifest.fromJson(decoded);
   }
 }
 
-class ManifestLocale {
-  const ManifestLocale({required this.version, this.url, this.sha256});
+class ReRuneManifestLocale {
+  const ReRuneManifestLocale({required this.version, this.url, this.sha256});
 
   final int version;
   final Uri? url;
   final String? sha256;
 
-  factory ManifestLocale.fromJson(Map<String, Object?> json) {
+  factory ReRuneManifestLocale.fromJson(Map<String, Object?> json) {
     final version = json['version'];
     if (version is! int) {
-      throw const FormatException('Manifest locale entry is invalid.');
+      throw const FormatException('ReRuneManifest locale entry is invalid.');
     }
     final urlValue = json['url'];
     Uri? url;
@@ -61,7 +67,7 @@ class ManifestLocale {
       url = Uri.parse(urlValue);
     }
     final sha256 = json['sha256'];
-    return ManifestLocale(
+    return ReRuneManifestLocale(
       version: version,
       url: url,
       sha256: sha256 is String ? sha256 : null,
@@ -77,19 +83,19 @@ class ManifestLocale {
   }
 }
 
-class CachedManifest {
-  const CachedManifest({required this.manifest, this.etag});
+class ReRuneCachedManifest {
+  const ReRuneCachedManifest({required this.manifest, this.etag});
 
-  final Manifest manifest;
+  final ReRuneManifest manifest;
   final String? etag;
 
-  factory CachedManifest.fromJson(Map<String, Object?> json) {
+  factory ReRuneCachedManifest.fromJson(Map<String, Object?> json) {
     final manifestJson = json['manifest'];
     if (manifestJson is! Map<String, Object?>) {
       throw const FormatException('Cached manifest is invalid.');
     }
-    return CachedManifest(
-      manifest: Manifest.fromJson(manifestJson),
+    return ReRuneCachedManifest(
+      manifest: ReRuneManifest.fromJson(manifestJson),
       etag: json['etag'] as String?,
     );
   }
@@ -99,8 +105,8 @@ class CachedManifest {
   }
 }
 
-class CachedArb {
-  const CachedArb({required this.data, this.etag});
+class ReRuneCachedArb {
+  const ReRuneCachedArb({required this.data, this.etag});
 
   final String data;
   final String? etag;

@@ -7,7 +7,7 @@ class ReruneAppLocalizationsDelegate
     extends LocalizationsDelegate<AppLocalizations> {
   const ReruneAppLocalizationsDelegate({required this.controller});
 
-  final OtaLocalizationController controller;
+  final ReRuneLocalizationController controller;
 
   @override
   bool isSupported(Locale locale) =>
@@ -30,7 +30,7 @@ class _ReruneAppLocalizations extends AppLocalizations {
     : super(_base.localeName);
 
   final AppLocalizations _base;
-  final OtaLocalizationController _controller;
+  final ReRuneLocalizationController _controller;
   final Locale _locale;
 
   @override
@@ -53,16 +53,16 @@ class _ReruneAppLocalizations extends AppLocalizations {
 }
 
 class ReRune {
-  static OtaLocalizationController? _controller;
+  static ReRuneLocalizationController? _controller;
 
   static void setup({
     String? projectId,
     String? apiKey,
     Uri? manifestUrl,
-    CacheStore? cacheStore,
-    OtaUpdatePolicy? updatePolicy,
+    ReRuneCacheStore? cacheStore,
+    ReRuneUpdatePolicy? updatePolicy,
   }) {
-    final controller = OtaLocalizationController(
+    final controller = ReRuneLocalizationController(
       supportedLocales: AppLocalizations.supportedLocales,
       projectId: projectId,
       apiKey: apiKey,
@@ -76,9 +76,9 @@ class ReRune {
     controller.initialize();
   }
 
-  static OtaLocalizationController get controller => _requireController();
+  static ReRuneLocalizationController get controller => _requireController();
 
-  static Future<OtaUpdateResult> checkForUpdates() {
+  static Future<ReRuneUpdateResult> checkForUpdates() {
     return _requireController().checkForUpdates();
   }
 
@@ -94,7 +94,7 @@ class ReRune {
 
   static List<Locale> get supportedLocales => AppLocalizations.supportedLocales;
 
-  static OtaLocalizationController _requireController() {
+  static ReRuneLocalizationController _requireController() {
     final current = _controller;
     if (current != null) {
       return current;

@@ -10,6 +10,7 @@ import 'package:intl/message_format.dart';
 import '../cache/cache_store.dart';
 import '../model/manifest.dart';
 import '../model/ota_error.dart';
+import '../model/rerune_text_update_event.dart';
 import '../model/update_result.dart';
 import '../network/arb_client.dart';
 import '../network/manifest_client.dart';
@@ -17,20 +18,20 @@ import '../policy/update_policy.dart';
 import '../utils/arb_utils.dart';
 import '../utils/locale_utils.dart';
 
-class OtaLocalizationController extends ChangeNotifier {
+class ReRuneLocalizationController extends ChangeNotifier {
   static final Uri _reruneApiBaseUrl = Uri.parse('https://rerune.io/api');
 
-  OtaLocalizationController({
+  ReRuneLocalizationController({
     Uri? manifestUrl,
     required this.supportedLocales,
-    CacheStore? cacheStore,
-    OtaUpdatePolicy? updatePolicy,
+    ReRuneCacheStore? cacheStore,
+    ReRuneUpdatePolicy? updatePolicy,
     ManifestClient? manifestClient,
     ArbClient? arbClient,
     String? apiKey,
     String? projectId,
-  }) : _cacheStore = cacheStore ?? createDefaultCacheStore(),
-       _updatePolicy = updatePolicy ?? const OtaUpdatePolicy(),
+  }) : _cacheStore = cacheStore ?? reRuneCreateDefaultCacheStore(),
+       _updatePolicy = updatePolicy ?? const ReRuneUpdatePolicy(),
        _manifestClient = manifestClient ?? const ManifestClient(),
        _arbClient = arbClient ?? const ArbClient(),
        _apiKeyOverride = apiKey,
@@ -39,8 +40,8 @@ class OtaLocalizationController extends ChangeNotifier {
 
   final List<Locale> supportedLocales;
 
-  final CacheStore _cacheStore;
-  final OtaUpdatePolicy _updatePolicy;
+  final ReRuneCacheStore _cacheStore;
+  final ReRuneUpdatePolicy _updatePolicy;
   final ManifestClient _manifestClient;
   final ArbClient _arbClient;
   final String? _apiKeyOverride;
@@ -48,15 +49,24 @@ class OtaLocalizationController extends ChangeNotifier {
   final Uri? _manifestUrlOverride;
 
   final Map<String, Map<String, String>> _bundles = {};
-  CachedManifest? _cachedManifest;
+  ReRuneCachedManifest? _cachedManifest;
   Timer? _timer;
   int _revision = 0;
+  int _fetchedRevision = 0;
+  final ValueNotifier<int> _fetchedRevisionNotifier = ValueNotifier<int>(0);
+  final StreamController<ReRuneTextUpdateEvent> _fetchedTextUpdates =
+      StreamController<ReRuneTextUpdateEvent>.broadcast();
   bool _configResolved = false;
   String? _apiKey;
   String? _projectId;
   Uri? _manifestUrl;
 
   int get revision => _revision;
+  int get reRuneFetchedRevision => _fetchedRevision;
+  ValueListenable<int> get reRuneFetchedRevisionListenable =>
+      _fetchedRevisionNotifier;
+  Stream<ReRuneTextUpdateEvent> get onReRuneFetchedTextsApplied =>
+      _fetchedTextUpdates.stream;
 
   Future<void> initialize() async {
     await _resolveConfig();
@@ -109,19 +119,19 @@ class OtaLocalizationController extends ChangeNotifier {
     }
   }
 
-  Future<OtaUpdateResult> checkForUpdates() async {
+  Future<ReRuneUpdateResult> checkForUpdates() async {
     await _resolveConfig();
     final updated = <Locale>[];
     final skipped = <Locale>[];
-    final errors = <OtaError>[];
+    final errors = <ReRuneError>[];
 
-    CachedManifest? cachedManifest;
+    ReRuneCachedManifest? cachedManifest;
     try {
       cachedManifest = _cachedManifest ?? await _cacheStore.readManifest();
     } catch (error, stackTrace) {
       errors.add(
-        OtaError(
-          type: OtaErrorType.storage,
+        ReRuneError(
+          type: ReRuneErrorType.storage,
           message: 'Failed to read cached manifest.',
           cause: error,
           stackTrace: stackTrace,
@@ -131,20 +141,20 @@ class OtaLocalizationController extends ChangeNotifier {
 
     if (_manifestUrl == null) {
       errors.add(
-        const OtaError(
-          type: OtaErrorType.invalidManifest,
+        const ReRuneError(
+          type: ReRuneErrorType.invalidManifest,
           message:
-              'Manifest URL is missing. Provide projectId/apiKey in constructor or add rerune.json to assets.',
+              'ReRuneManifest URL is missing. Provide projectId/apiKey in constructor or add rerune.json to assets.',
         ),
       );
-      return OtaUpdateResult(
+      return ReRuneUpdateResult(
         updatedLocales: updated,
         skippedLocales: skipped,
         errors: errors,
       );
     }
 
-    Manifest? manifest = cachedManifest?.manifest;
+    ReRuneManifest? manifest = cachedManifest?.manifest;
     try {
       if (kDebugMode) {
         debugPrint(
@@ -160,7 +170,7 @@ class OtaLocalizationController extends ChangeNotifier {
           .timeout(const Duration(seconds: 15));
       if (!result.notModified && result.manifest != null) {
         manifest = result.manifest;
-        _cachedManifest = CachedManifest(
+        _cachedManifest = ReRuneCachedManifest(
           manifest: result.manifest!,
           etag: result.etag,
         );
@@ -172,8 +182,8 @@ class OtaLocalizationController extends ChangeNotifier {
         debugPrint('$stackTrace');
       }
       errors.add(
-        OtaError(
-          type: OtaErrorType.network,
+        ReRuneError(
+          type: ReRuneErrorType.network,
           message: 'Failed to fetch manifest.',
           cause: error,
           stackTrace: stackTrace,
@@ -182,7 +192,7 @@ class OtaLocalizationController extends ChangeNotifier {
     }
 
     if (manifest == null) {
-      return OtaUpdateResult(
+      return ReRuneUpdateResult(
         updatedLocales: updated,
         skippedLocales: skipped,
         errors: errors,
@@ -198,13 +208,13 @@ class OtaLocalizationController extends ChangeNotifier {
       }
 
       final previousVersion = cachedManifest?.manifest.locales[key]?.version;
-      CachedArb? cachedArb;
+      ReRuneCachedArb? cachedArb;
       try {
         cachedArb = await _cacheStore.readArb(key);
       } catch (error, stackTrace) {
         errors.add(
-          OtaError(
-            type: OtaErrorType.storage,
+          ReRuneError(
+            type: ReRuneErrorType.storage,
             message: 'Failed to read cached ARB for $key.',
             cause: error,
             stackTrace: stackTrace,
@@ -222,8 +232,8 @@ class OtaLocalizationController extends ChangeNotifier {
           _bundles[key] = parseArb(cachedArb.data);
         } catch (error, stackTrace) {
           errors.add(
-            OtaError(
-              type: OtaErrorType.parse,
+            ReRuneError(
+              type: ReRuneErrorType.parse,
               message: 'Failed to parse cached ARB for $key.',
               cause: error,
               stackTrace: stackTrace,
@@ -238,8 +248,8 @@ class OtaLocalizationController extends ChangeNotifier {
         final arbUrl = _resolveArbUrl(entry, key);
         if (arbUrl == null) {
           errors.add(
-            OtaError(
-              type: OtaErrorType.invalidManifest,
+            ReRuneError(
+              type: ReRuneErrorType.invalidManifest,
               message:
                   'No ARB URL for $key. Provide a locale url in manifest or project_id.',
             ),
@@ -265,8 +275,8 @@ class OtaLocalizationController extends ChangeNotifier {
         }
         if (entry.sha256 != null && !_matchesChecksum(data, entry.sha256!)) {
           errors.add(
-            OtaError(
-              type: OtaErrorType.checksum,
+            ReRuneError(
+              type: ReRuneErrorType.checksum,
               message: 'Checksum mismatch for $key.',
             ),
           );
@@ -277,7 +287,7 @@ class OtaLocalizationController extends ChangeNotifier {
         _bundles[key] = parsed;
         await _cacheStore.writeArb(
           key,
-          CachedArb(data: data, etag: response.etag),
+          ReRuneCachedArb(data: data, etag: response.etag),
         );
         updated.add(locale);
       } catch (error, stackTrace) {
@@ -286,8 +296,8 @@ class OtaLocalizationController extends ChangeNotifier {
           debugPrint('$stackTrace');
         }
         errors.add(
-          OtaError(
-            type: OtaErrorType.network,
+          ReRuneError(
+            type: ReRuneErrorType.network,
             message: 'Failed to fetch ARB for $key.',
             cause: error,
             stackTrace: stackTrace,
@@ -299,10 +309,18 @@ class OtaLocalizationController extends ChangeNotifier {
 
     if (updated.isNotEmpty) {
       _revision += 1;
+      _fetchedRevision += 1;
+      _fetchedRevisionNotifier.value = _fetchedRevision;
+      _fetchedTextUpdates.add(
+        ReRuneTextUpdateEvent(
+          revision: _fetchedRevision,
+          updatedLocales: List<Locale>.unmodifiable(updated),
+        ),
+      );
       notifyListeners();
     }
 
-    return OtaUpdateResult(
+    return ReRuneUpdateResult(
       updatedLocales: updated,
       skippedLocales: skipped,
       errors: errors,
@@ -358,7 +376,7 @@ class OtaLocalizationController extends ChangeNotifier {
 
     const message =
         'Missing Rerune configuration. Provide `projectId` and `apiKey` '
-        'in OtaLocalizationController, or add `rerune.json` to Flutter assets '
+        'in ReRuneLocalizationController, or add `rerune.json` to Flutter assets '
         'with `project_id` and `api_key`.';
     if (kDebugMode) {
       debugPrint('OtaLocalization: $message');
@@ -374,7 +392,7 @@ class OtaLocalizationController extends ChangeNotifier {
     return {'X-API-Key': apiKey};
   }
 
-  Uri? _resolveArbUrl(ManifestLocale entry, String localeKey) {
+  Uri? _resolveArbUrl(ReRuneManifestLocale entry, String localeKey) {
     final url = entry.url;
     if (url != null) {
       if (url.isAbsolute) {
@@ -440,6 +458,8 @@ class OtaLocalizationController extends ChangeNotifier {
   @override
   void dispose() {
     _timer?.cancel();
+    _fetchedRevisionNotifier.dispose();
+    _fetchedTextUpdates.close();
     super.dispose();
   }
 }

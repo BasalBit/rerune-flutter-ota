@@ -5,39 +5,49 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rerune/rerune.dart';
 
 import 'package:example/main.dart';
-import 'package:example/l10n/gen/rerune_app_localizations.dart';
+import 'package:example/l10n/gen/app_localizations.dart';
 
 void main() {
-  testWidgets('renders bundled translations', (WidgetTester tester) async {
-    ReRune.setup(
+  testWidgets('renders menu and opens all demo pages', (
+    WidgetTester tester,
+  ) async {
+    final controller = ReRuneLocalizationController(
+      supportedLocales: AppLocalizations.supportedLocales,
       projectId: 'project',
       apiKey: 'key',
-      updatePolicy: const OtaUpdatePolicy(checkOnStart: false),
+      updatePolicy: const ReRuneUpdatePolicy(checkOnStart: false),
     );
 
-    addTearDown(() => ReRune.controller.dispose());
-    await tester.pump();
-
-    await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: ReRune.localizationsDelegates,
-        supportedLocales: ReRune.supportedLocales,
-        home: const ExampleHome(),
-      ),
-    );
+    await tester.pumpWidget(OtaExampleApp(controller: controller));
 
     await tester.pump();
 
-    expect(find.text('Rerune OTA Example'), findsOneWidget);
+    expect(find.text('Rerune OTA menu'), findsOneWidget);
+    expect(find.text('1) Manual refresh page'), findsOneWidget);
+    expect(find.text('2) Stream event listener + setState'), findsOneWidget);
     expect(
-      find.text('Translations update without restarting.'),
+      find.text('3) ReRuneBuilder (fetched updates only)'),
       findsOneWidget,
     );
-    expect(find.text('Check for updates'), findsOneWidget);
+
+    await tester.tap(find.text('1) Manual refresh page'));
+    await tester.pumpAndSettle();
+    expect(find.text('Manual refresh'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('2) Stream event listener + setState'));
+    await tester.pumpAndSettle();
+    expect(find.text('Event listener + setState'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('3) ReRuneBuilder (fetched updates only)'));
+    await tester.pumpAndSettle();
+    expect(find.text('ReRuneBuilder'), findsOneWidget);
   });
 }

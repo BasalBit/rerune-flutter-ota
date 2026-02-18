@@ -6,4 +6,4 @@ import 'cache_store_stub.dart'
 
 import 'cache_store_base.dart';
 
-CacheStore createDefaultCacheStore() => createCacheStore();
+ReRuneCacheStore reRuneCreateDefaultCacheStore() => createCacheStore();

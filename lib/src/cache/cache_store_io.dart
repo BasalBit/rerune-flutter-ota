@@ -6,7 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import '../model/manifest.dart';
 import 'cache_store_base.dart';
 
-class IoCacheStore extends CacheStore {
+class IoCacheStore extends ReRuneCacheStore {
   const IoCacheStore({this.directoryName = 'ota_localizations'});
 
   final String directoryName;
@@ -27,7 +27,7 @@ class IoCacheStore extends CacheStore {
       '${dir.path}/locale_$localeKey.etag';
 
   @override
-  Future<CachedManifest?> readManifest() async {
+  Future<ReRuneCachedManifest?> readManifest() async {
     final dir = await _rootDir();
     final file = File(_manifestPath(dir));
     if (!await file.exists()) {
@@ -38,18 +38,18 @@ class IoCacheStore extends CacheStore {
     if (decoded is! Map<String, Object?>) {
       return null;
     }
-    return CachedManifest.fromJson(decoded);
+    return ReRuneCachedManifest.fromJson(decoded);
   }
 
   @override
-  Future<void> writeManifest(CachedManifest manifest) async {
+  Future<void> writeManifest(ReRuneCachedManifest manifest) async {
     final dir = await _rootDir();
     final file = File(_manifestPath(dir));
     await file.writeAsString(jsonEncode(manifest.toJson()));
   }
 
   @override
-  Future<CachedArb?> readArb(String localeKey) async {
+  Future<ReRuneCachedArb?> readArb(String localeKey) async {
     final dir = await _rootDir();
     final arbFile = File(_arbPath(dir, localeKey));
     if (!await arbFile.exists()) {
@@ -58,11 +58,14 @@ class IoCacheStore extends CacheStore {
     final data = await arbFile.readAsString();
     final etagFile = File(_etagPath(dir, localeKey));
     final etag = await etagFile.exists() ? await etagFile.readAsString() : null;
-    return CachedArb(data: data, etag: etag?.isEmpty == true ? null : etag);
+    return ReRuneCachedArb(
+      data: data,
+      etag: etag?.isEmpty == true ? null : etag,
+    );
   }
 
   @override
-  Future<void> writeArb(String localeKey, CachedArb arb) async {
+  Future<void> writeArb(String localeKey, ReRuneCachedArb arb) async {
     final dir = await _rootDir();
     final arbFile = File(_arbPath(dir, localeKey));
     await arbFile.writeAsString(arb.data);
@@ -77,4 +80,4 @@ class IoCacheStore extends CacheStore {
   }
 }
 
-CacheStore createCacheStore() => const IoCacheStore();
+ReRuneCacheStore createCacheStore() => const IoCacheStore();
