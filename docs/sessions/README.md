@@ -9,10 +9,12 @@ Purpose:
 
 How to use:
 - Start by reading the most recent session files in this directory.
-- Use `2026-02-18-compacted-history.md` as the latest high-level checkpoint.
+- Use `2026-02-19-single-update-handle.md` as the latest API-direction checkpoint.
+- Use `2026-02-18-compacted-history.md` for the broader release context.
 - Refer to older session files for deeper design/implementation rationale.
 
 Current session files:
+- `2026-02-19-single-update-handle.md`
 - `2026-02-18-rerune-builder-wrapper.md`
 - `2026-02-18-compacted-history.md`
 - `1771371213524-crisp-circuit.md`

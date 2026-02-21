@@ -386,7 +386,6 @@ String? _generateWrapper({
           .toList(growable: false);
 
   final buffer = StringBuffer();
-  buffer.writeln("import 'package:flutter/foundation.dart';");
   buffer.writeln("import 'package:flutter/widgets.dart';");
   buffer.writeln("import 'package:rerune/rerune.dart';");
   buffer.writeln(
@@ -465,33 +464,18 @@ String? _generateWrapper({
   }
   buffer.writeln('}');
   buffer.writeln('');
-  buffer.writeln(
-    'enum ReRuneRefreshMode { fetchedUpdatesOnly, anyControllerChange }',
-  );
-  buffer.writeln('');
   buffer.writeln('class ReRuneBuilder extends StatelessWidget {');
   buffer.writeln('  const ReRuneBuilder({');
   buffer.writeln('    super.key,');
   buffer.writeln('    required this.builder,');
-  buffer.writeln(
-    '    this.refreshMode = ReRuneRefreshMode.fetchedUpdatesOnly,',
-  );
   buffer.writeln('  });');
   buffer.writeln('');
   buffer.writeln('  final Widget Function(BuildContext context) builder;');
-  buffer.writeln('  final ReRuneRefreshMode refreshMode;');
   buffer.writeln('');
   buffer.writeln('  @override');
   buffer.writeln('  Widget build(BuildContext context) {');
-  buffer.writeln('    final controller = ReRune._requireController();');
-  buffer.writeln('    final Listenable animation =');
-  buffer.writeln(
-    '        refreshMode == ReRuneRefreshMode.anyControllerChange',
-  );
-  buffer.writeln('            ? controller');
-  buffer.writeln('            : controller.reRuneFetchedRevisionListenable;');
-  buffer.writeln('    return AnimatedBuilder(');
-  buffer.writeln('      animation: animation,');
+  buffer.writeln('    return StreamBuilder<ReRuneTextUpdateEvent>(');
+  buffer.writeln('      stream: ReRune.onFetchedTextsApplied,');
   buffer.writeln('      builder: (context, _) => builder(context),');
   buffer.writeln('    );');
   buffer.writeln('  }');
@@ -526,14 +510,6 @@ String? _generateWrapper({
   );
   buffer.writeln(
     '    return _requireController().onReRuneFetchedTextsApplied;',
-  );
-  buffer.writeln('  }');
-  buffer.writeln('');
-  buffer.writeln(
-    '  static ValueListenable<int> get fetchedRevisionListenable {',
-  );
-  buffer.writeln(
-    '    return _requireController().reRuneFetchedRevisionListenable;',
   );
   buffer.writeln('  }');
   buffer.writeln('');

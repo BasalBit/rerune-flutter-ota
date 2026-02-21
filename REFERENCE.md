@@ -6,11 +6,10 @@ This document is a compact reference of all completed changes in the current wor
 
 - Optional immediate text refresh support after OTA fetch/apply.
 - Configuration/auth moved to `otaPublishId` only.
-- New fetched-update APIs exposed through generated `ReRune` static accessors:
-  - `ReRune.fetchedRevisionListenable`
+- Single fetched-update event handle exposed through generated `ReRune` static accessor:
   - `ReRune.onFetchedTextsApplied`
 - New event model: `ReRuneTextUpdateEvent`.
-- Generated wrapper widget: `ReRuneBuilder` with `ReRuneRefreshMode`.
+- Generated wrapper widget: `ReRuneBuilder`.
 
 Important behavior: immediate refresh is optional. Existing consumers are not forced into fetched-only refresh.
 
@@ -57,14 +56,14 @@ Example now demonstrates three refresh strategies from a menu:
 2. Event listener page (`EventListenerPage`)
    - Listens to `ReRune.onFetchedTextsApplied` and updates with `setState`.
 3. Builder page (`BuilderPage`)
-   - Uses generated `ReRuneBuilder` (defaults to fetched-updates-only redraw).
+   - Uses generated `ReRuneBuilder` (redraws on fetched-update events).
 
 Pages were split into separate files under `example/lib/pages/`.
 
 ## 4) Generator and integration updates
 
 - `bin/generate.dart` updated to emit renamed `ReRune*` API types.
-- `bin/generate.dart` now emits a generated `ReRuneBuilder` widget for simple OTA-driven redraws.
+- `bin/generate.dart` now emits a generated `ReRuneBuilder` widget that redraws from the single fetched-update event stream.
 - Generated sample wrapper updated accordingly:
   - `example/lib/l10n/gen/rerune_app_localizations.dart`
 - Public export updated for event model:

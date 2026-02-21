@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:rerune/rerune.dart';
 import 'package:rerune/src/controller/ota_localization_controller.dart';
@@ -50,27 +49,15 @@ class _ReruneAppLocalizations extends AppLocalizations {
   }
 }
 
-enum ReRuneRefreshMode { fetchedUpdatesOnly, anyControllerChange }
-
 class ReRuneBuilder extends StatelessWidget {
-  const ReRuneBuilder({
-    super.key,
-    required this.builder,
-    this.refreshMode = ReRuneRefreshMode.fetchedUpdatesOnly,
-  });
+  const ReRuneBuilder({super.key, required this.builder});
 
   final Widget Function(BuildContext context) builder;
-  final ReRuneRefreshMode refreshMode;
 
   @override
   Widget build(BuildContext context) {
-    final controller = ReRune._requireController();
-    final Listenable animation =
-        refreshMode == ReRuneRefreshMode.anyControllerChange
-        ? controller
-        : controller.reRuneFetchedRevisionListenable;
-    return AnimatedBuilder(
-      animation: animation,
+    return StreamBuilder<ReRuneTextUpdateEvent>(
+      stream: ReRune.onFetchedTextsApplied,
       builder: (context, _) => builder(context),
     );
   }
@@ -102,10 +89,6 @@ class ReRune {
 
   static Stream<ReRuneTextUpdateEvent> get onFetchedTextsApplied {
     return _requireController().onReRuneFetchedTextsApplied;
-  }
-
-  static ValueListenable<int> get fetchedRevisionListenable {
-    return _requireController().reRuneFetchedRevisionListenable;
   }
 
   static List<LocalizationsDelegate<dynamic>> get localizationsDelegates {

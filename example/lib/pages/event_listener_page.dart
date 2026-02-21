@@ -64,7 +64,7 @@ class _EventListenerPageState extends State<EventListenerPage> {
         padding: const EdgeInsets.all(24),
         children: [
           const Text(
-            'This page listens to onReRuneFetchedTextsApplied and rebuilds with setState.',
+            'This page listens to ReRune.onFetchedTextsApplied and rebuilds with setState.',
           ),
           const SizedBox(height: 24),
           Text(title, style: Theme.of(context).textTheme.headlineSmall),

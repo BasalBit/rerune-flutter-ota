@@ -15,7 +15,7 @@ Add the package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  rerune: ^0.1.1
+  rerune: ^0.1.2
 ```
 
 Provide your publish identifier through setup:
@@ -89,7 +89,6 @@ you explicitly use the new APIs.
 
 - `ReRuneBuilder`
 - `ReRune.onFetchedTextsApplied`
-- `ReRune.fetchedRevisionListenable`
 
 Use `ReRuneBuilder` when you want simple rebuilds after fetched OTA text updates:
 
@@ -102,8 +101,7 @@ ReRuneBuilder(
 )
 ```
 
-`ReRuneBuilder` defaults to fetched-updates-only refresh. You can opt into any
-controller change with `refreshMode: ReRuneRefreshMode.anyControllerChange`.
+`ReRuneBuilder` redraws when `ReRune.onFetchedTextsApplied` emits.
 
 You can also subscribe directly:
 

@@ -2,6 +2,12 @@
 
 - No changes yet.
 
+## 0.1.2
+
+- BREAKING: removed generated `ReRune.fetchedRevisionListenable`; use `ReRune.onFetchedTextsApplied` as the single fetched-update event handle.
+- BREAKING: simplified generated `ReRuneBuilder` to a single `builder:` callback; removed `ReRuneRefreshMode` and refresh mode options.
+- Updated generator output and example pages/docs to use the single event-stream + builder model.
+
 ## 0.1.1
 
 - Added generated `ReRuneBuilder` widget for app-side redraws after OTA changes.
