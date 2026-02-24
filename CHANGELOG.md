@@ -2,6 +2,10 @@
 
 - No changes yet.
 
+## 0.1.3
+
+- Lowered package SDK constraints to `dart >=3.4.0 <4.0.0` and `flutter >=3.22.0` to avoid unnecessarily requiring Dart 3.9+.
+
 ## 0.1.2
 
 - BREAKING: removed generated `ReRune.fetchedRevisionListenable`; use `ReRune.onFetchedTextsApplied` as the single fetched-update event handle.
